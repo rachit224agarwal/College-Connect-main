@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 import { 
   Users, 
   CheckCircle, 
@@ -15,7 +14,6 @@ import {
   AlertCircle,
   RefreshCw
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface User {
   _id: string;
@@ -23,11 +21,15 @@ interface User {
   email: string;
   studentIdUrl: string;
   createdAt: string;
-  yearOfAdmission?: string;
+  role: string;
+  verificationStatus: string;
+  admissionYear?: number;
   college?: string;
+  currentYear?: number;
   course?: string;
   branch?: string;
-  yearOfGraduation?: string;
+  graduationYear?: number;
+  personalEmail?: string;
 }
 
 interface Stats {
@@ -51,13 +53,7 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ icon, title, value, color, bgColor, trend }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    whileHover={{ y: -5 }}
-    className={`${bgColor} rounded-xl shadow-lg p-6 relative overflow-hidden`}
-  >
-    {/* Background decoration */}
+  <div className={`${bgColor} rounded-xl shadow-lg p-6 relative overflow-hidden transition-transform hover:-translate-y-1`}>
     <div className="absolute top-0 right-0 opacity-10">
       <div className={`${color} w-32 h-32 rounded-full -mr-8 -mt-8`}></div>
     </div>
@@ -81,10 +77,10 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, color, bgColor,
         <p className="text-4xl font-bold text-gray-900">{value}</p>
       </div>
     </div>
-  </motion.div>
+  </div>
 );
 
-function AdminDashboard() {
+export default function AdminDashboard() {
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -115,11 +111,24 @@ function AdminDashboard() {
         axios.get(`${API_URL}/admin/stats`, { withCredentials: true }),
       ]);
 
-      setPendingUsers(pendingRes.data.users);
-      setStats(statsRes.data.stats);
+      setPendingUsers(pendingRes.data.users || []);
+      setFilteredUsers(pendingRes.data.users || []);
+      setStats(statsRes.data.stats || null);
     } catch (error: any) {
       console.error("Fetch error:", error);
-      toast.error(error.response?.data?.error || "Failed to load data");
+      const errorMsg = error.response?.data?.error || error.message || "Failed to load data";
+      alert(`❌ Error: ${errorMsg}`);
+      
+      // Set empty data on error
+      setPendingUsers([]);
+      setFilteredUsers([]);
+      setStats({
+        totalUsers: 0,
+        pendingCount: 0,
+        approvedCount: 0,
+        rejectedCount: 0,
+        recentRegistrations: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -146,7 +155,7 @@ function AdminDashboard() {
   };
 
   const handleApprove = async (userId: string) => {
-    if (!confirm("Are you sure you want to approve this user?")) return;
+    if (!window.confirm("Are you sure you want to approve this user?")) return;
     
     setActionLoading(true);
     try {
@@ -156,12 +165,13 @@ function AdminDashboard() {
         { withCredentials: true }
       );
 
-      toast.success("✅ User approved successfully!");
+      alert("✅ User approved successfully!");
       setShowModal(false);
       fetchData();
     } catch (error: any) {
       console.error("Approve error:", error);
-      toast.error(error.response?.data?.error || "Failed to approve user");
+      const errorMsg = error.response?.data?.error || error.message || "Failed to approve user";
+      alert(`❌ Error: ${errorMsg}`);
     } finally {
       setActionLoading(false);
     }
@@ -169,11 +179,11 @@ function AdminDashboard() {
 
   const handleReject = async (userId: string) => {
     if (!rejectionReason.trim()) {
-      toast.error("Please provide a rejection reason");
+      alert("❌ Please provide a rejection reason");
       return;
     }
 
-    if (!confirm("Are you sure you want to reject this user?")) return;
+    if (!window.confirm("Are you sure you want to reject this user?")) return;
 
     setActionLoading(true);
     try {
@@ -183,13 +193,14 @@ function AdminDashboard() {
         { withCredentials: true }
       );
 
-      toast.success("User rejected");
+      alert("✅ User rejected successfully");
       setShowModal(false);
       setRejectionReason("");
       fetchData();
     } catch (error: any) {
       console.error("Reject error:", error);
-      toast.error(error.response?.data?.error || "Failed to reject user");
+      const errorMsg = error.response?.data?.error || error.message || "Failed to reject user";
+      alert(`❌ Error: ${errorMsg}`);
     } finally {
       setActionLoading(false);
     }
@@ -202,28 +213,38 @@ function AdminDashboard() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Name", "Email", "College", "Course", "Branch", "Registered Date"];
+    if (pendingUsers.length === 0) {
+      alert("❌ No data to export");
+      return;
+    }
+
+    const headers = ["Name", "Email", "Role", "College", "Course", "Branch", "Year", "Registered Date"];
     const rows = pendingUsers.map(user => [
       user.name,
       user.email,
+      user.role || "N/A",
       user.college || "N/A",
       user.course || "N/A",
       user.branch || "N/A",
+      user.currentYear || "N/A",
       new Date(user.createdAt).toLocaleDateString()
     ]);
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.join(","))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `pending_users_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
     a.click();
-    toast.success("CSV downloaded successfully!");
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    alert("✅ CSV downloaded successfully!");
   };
 
   const getUniqueColleges = () => {
@@ -235,9 +256,9 @@ function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mb-4"></div>
-        <p className="text-gray-600 animate-pulse">Loading dashboard...</p>
+        <p className="text-gray-600 animate-pulse font-medium">Loading dashboard...</p>
       </div>
     );
   }
@@ -246,11 +267,7 @@ function AdminDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-        >
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
               Admin Dashboard
@@ -261,12 +278,12 @@ function AdminDashboard() {
           </div>
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
           </button>
-        </motion.div>
+        </div>
 
         {/* Stats Grid */}
         {stats && (
@@ -313,12 +330,8 @@ function AdminDashboard() {
         )}
 
         {/* Pending Verifications Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-lg overflow-hidden"
-        >
-          {/* Card Header with Search & Filters */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Card Header */}
           <div className="p-6 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
@@ -357,41 +370,33 @@ function AdminDashboard() {
             </div>
 
             {/* Search & Filter Panel */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4"
-                >
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                      type="text"
-                      placeholder="Search by name or email..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
+            {showFilters && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
 
-                  <select
-                  title="filter"
-                    value={filterCollege}
-                    onChange={(e) => setFilterCollege(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="all">All Colleges</option>
-                    {getUniqueColleges().map((college) => (
-                      <option key={college} value={college}>
-                        {college}
-                      </option>
-                    ))}
-                  </select>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                <select
+                  value={filterCollege}
+                  onChange={(e) => setFilterCollege(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="all">All Colleges</option>
+                  {getUniqueColleges().map((college) => (
+                    <option key={college} value={college}>
+                      {college}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Table Content */}
@@ -456,314 +461,296 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    <AnimatePresence>
-                      {filteredUsers.map((user, index) => (
-                        <motion.tr
-                          key={user._id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -20 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                <span className="text-indigo-600 font-semibold text-sm">
-                                  {user.name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="ml-4">
-                                <div className="font-semibold text-gray-900">
-                                  {user.name}
-                                </div>
+                    {filteredUsers.map((user) => (
+                      <tr
+                        key={user._id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                              <span className="text-indigo-600 font-semibold text-sm">
+                                {user.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="font-semibold text-gray-900">
+                                {user.name}
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-600">{user.email}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-900">
-                              {user.college || "N/A"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm">
-                              <div className="text-gray-900">{user.course || "N/A"}</div>
-                              <div className="text-gray-500">{user.branch || "N/A"}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-600">
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => viewUser(user)}
-                              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Review
-                            </button>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-600">{user.email}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900">
+                            {user.college || "N/A"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm">
+                            <div className="text-gray-900">{user.course || "N/A"}</div>
+                            <div className="text-gray-500">{user.branch || "N/A"}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-600">
+                            {new Date(user.createdAt).toLocaleDateString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => viewUser(user)}
+                            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Review
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
 
               {/* Mobile Cards */}
               <div className="lg:hidden p-4 space-y-4">
-                <AnimatePresence>
-                  {filteredUsers.map((user, index) => (
-                    <motion.div
-                      key={user._id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                {filteredUsers.map((user) => (
+                  <div
+                    key={user._id}
+                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                          <span className="text-indigo-600 font-bold">
+                            {user.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900">{user.name}</h3>
+                          <p className="text-sm text-gray-500">{user.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm mb-4">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">College:</span>
+                        <span className="text-gray-900 font-medium">
+                          {user.college || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Course:</span>
+                        <span className="text-gray-900 font-medium">
+                          {user.course || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Registered:</span>
+                        <span className="text-gray-900 font-medium">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => viewUser(user)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <span className="text-indigo-600 font-bold">
-                              {user.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900">{user.name}</h3>
-                            <p className="text-sm text-gray-500">{user.email}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 text-sm mb-4">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">College:</span>
-                          <span className="text-gray-900 font-medium">
-                            {user.college || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Course:</span>
-                          <span className="text-gray-900 font-medium">
-                            {user.course || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Registered:</span>
-                          <span className="text-gray-900 font-medium">
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => viewUser(user)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Review Application
-                      </button>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                      <Eye className="w-4 h-4" />
+                      Review Application
+                    </button>
+                  </div>
+                ))}
               </div>
             </>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* Review Modal */}
-      <AnimatePresence>
-        {showModal && selectedUser && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto"
-            onClick={() => !actionLoading && setShowModal(false)}
+      {showModal && selectedUser && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          onClick={() => !actionLoading && setShowModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto shadow-2xl"
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto shadow-2xl"
-            >
-              {/* Modal Header */}
-              <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    Student Verification
-                  </h3>
-                  <p className="text-gray-600 text-sm mt-1">
-                    Review application details carefully
-                  </p>
-                </div>
-                <button
-                  onClick={() => !actionLoading && setShowModal(false)}
-                  disabled={actionLoading}
-                  className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-                  title="Close"
-                  aria-label="Close"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+            {/* Modal Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Student Verification
+                </h3>
+                <p className="text-gray-600 text-sm mt-1">
+                  Review application details carefully
+                </p>
               </div>
+              <button
+                onClick={() => !actionLoading && setShowModal(false)}
+                disabled={actionLoading}
+                className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                aria-label="Close modal"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
 
-              <div className="p-6 space-y-6">
-                {/* Student Info */}
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Users className="h-5 w-5 text-indigo-600" />
-                    Student Information
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[
-                      { label: "Name", value: selectedUser.name },
-                      { label: "Email", value: selectedUser.email },
-                      { label: "College", value: selectedUser.college || "N/A" },
-                      { label: "Course", value: selectedUser.course || "N/A" },
-                      { label: "Branch", value: selectedUser.branch || "N/A" },
-                      { 
-                        label: "Year of Admission", 
-                        value: selectedUser.yearOfAdmission || "N/A" 
-                      },
-                      { 
-                        label: "Year of Graduation", 
-                        value: selectedUser.yearOfGraduation || "N/A" 
-                      },
-                      { 
-                        label: "Registration Date", 
-                        value: new Date(selectedUser.createdAt).toLocaleDateString() 
-                      },
-                    ].map((item) => (
-                      <div key={item.label}>
-                        <p className="text-sm font-medium text-gray-500 mb-1">
-                          {item.label}
-                        </p>
-                        <p className="text-base font-semibold text-gray-900">
-                          {item.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Student ID Card */}
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Eye className="h-5 w-5 text-indigo-600" />
-                    Student ID Card
-                  </h4>
-                  {selectedUser.studentIdUrl ? (
-                    selectedUser.studentIdUrl.toLowerCase().endsWith(".pdf") ? (
-                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
-                        <div className="text-red-600 mb-4">
-                          <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-                          </svg>
-                        </div>
-                        <p className="text-gray-700 font-medium mb-4">PDF Document</p>
-                        <a
-                          href={selectedUser.studentIdUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-                        >
-                          <Download className="h-5 w-5" />
-                          Open PDF in New Tab
-                        </a>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-gray-50 p-4">
-                        <img
-                          src={selectedUser.studentIdUrl}
-                          alt="Student ID"
-                          className="w-full rounded-lg shadow-lg"
-                          loading="lazy"
-                        />
-                      </div>
-                    )
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center bg-gray-50">
-                      <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">No ID uploaded</p>
+            <div className="p-6 space-y-6">
+              {/* Student Info */}
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-indigo-600" />
+                  Student Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: "Name", value: selectedUser.name },
+                    { label: "Email", value: selectedUser.email },
+                    { label: "Role", value: selectedUser.role || "N/A" },
+                    { label: "College", value: selectedUser.college || "N/A" },
+                    { label: "Course", value: selectedUser.course || "N/A" },
+                    { label: "Branch", value: selectedUser.branch || "N/A" },
+                    { 
+                      label: "Admission Year", 
+                      value: selectedUser.admissionYear || "N/A" 
+                    },
+                    { 
+                      label: "Current Year", 
+                      value: selectedUser.currentYear || "N/A" 
+                    },
+                    { 
+                      label: "Expected Graduation", 
+                      value: selectedUser.graduationYear || "N/A" 
+                    },
+                    { 
+                      label: "Registration Date", 
+                      value: new Date(selectedUser.createdAt).toLocaleDateString() 
+                    },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <p className="text-sm font-medium text-gray-500 mb-1">
+                        {item.label}
+                      </p>
+                      <p className="text-base font-semibold text-gray-900">
+                        {item.value}
+                      </p>
                     </div>
-                  )}
-                </div>
-
-                {/* Rejection Reason */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Rejection Reason (Required if rejecting)
-                  </label>
-                  <textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
-                    rows={4}
-                    placeholder="e.g., Invalid student ID, blurry image, incorrect information..."
-                    disabled={actionLoading}
-                  />
+                  ))}
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="sticky bottom-0 flex flex-col sm:flex-row items-center justify-end gap-3 p-6 border-t bg-gray-50">
-                <button
-                  onClick={() => setShowModal(false)}
-                  disabled={actionLoading}
-                  className="w-full sm:w-auto px-6 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleReject(selectedUser._id)}
-                  disabled={actionLoading}
-                  className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {actionLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Processing...
-                    </>
+              {/* Student ID Card */}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-indigo-600" />
+                  Student ID Card
+                </h4>
+                {selectedUser.studentIdUrl ? (
+                  selectedUser.studentIdUrl.toLowerCase().endsWith(".pdf") ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
+                      <div className="text-red-600 mb-4">
+                        <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-700 font-medium mb-4">PDF Document</p>
+                      <a
+                        href={selectedUser.studentIdUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                      >
+                        <Download className="h-5 w-5" />
+                        Open PDF in New Tab
+                      </a>
+                    </div>
                   ) : (
-                    <>
-                      <XCircle className="h-5 w-5" />
-                      Reject
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => handleApprove(selectedUser._id)}
-                  disabled={actionLoading}
-                  className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {actionLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-5 w-5" />
-                      Approve
-                    </>
-                  )}
-                </button>
+                    <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-gray-50 p-4">
+                      <img
+                        src={selectedUser.studentIdUrl}
+                        alt="Student ID"
+                        className="w-full rounded-lg shadow-lg"
+                        loading="lazy"
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center bg-gray-50">
+                    <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No ID uploaded</p>
+                  </div>
+                )}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+              {/* Rejection Reason */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Rejection Reason (Required if rejecting)
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                  rows={4}
+                  placeholder="e.g., Invalid student ID, blurry image, incorrect information..."
+                  disabled={actionLoading}
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 flex flex-col sm:flex-row items-center justify-end gap-3 p-6 border-t bg-gray-50">
+              <button
+                onClick={() => setShowModal(false)}
+                disabled={actionLoading}
+                className="w-full sm:w-auto px-6 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReject(selectedUser._id)}
+                disabled={actionLoading}
+                className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {actionLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-5 w-5" />
+                    Reject
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => handleApprove(selectedUser._id)}
+                disabled={actionLoading}
+                className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {actionLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-5 w-5" />
+                    Approve
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default AdminDashboard;

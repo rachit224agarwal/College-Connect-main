@@ -38,15 +38,18 @@ const sendTokenCookie = (res, user) => {
 // SIGNUP - Students & Alumni (Options 1 & 2)
 // ============================================
 export const signup = async (req, res) => {
+  console.log("🚀 === SIGNUP STARTED ===");
+  console.log("📦 Request Body:", req.body);
+  console.log("📎 File:", req.file);
   try {
-    const { 
-      name, 
-      email, 
-      password, 
-      role, 
-      admissionYear, 
+    const {
+      name,
+      email,
+      password,
+      role,
+      admissionYear,
       graduationYear,
-      passoutYear,  // ✅ NEW: For direct alumni signup
+      passoutYear, // ✅ NEW: For direct alumni signup
       personalEmail, // ✅ NEW: Alumni's personal email
     } = req.body;
 
@@ -67,8 +70,8 @@ export const signup = async (req, res) => {
     if (role === "student") {
       const emailDomain = email.split("@")[1];
       if (!allowedDomains.includes(emailDomain))
-        return res.status(400).json({ 
-          error: "Students must use a valid college email" 
+        return res.status(400).json({
+          error: "Students must use a valid college email",
         });
 
       if (!admissionYear || !graduationYear) {
@@ -92,8 +95,8 @@ export const signup = async (req, res) => {
 
       // Student ID is required
       if (!req.file) {
-        return res.status(400).json({ 
-          error: "Student ID card is required for verification" 
+        return res.status(400).json({
+          error: "Student ID card is required for verification",
         });
       }
     }
@@ -125,8 +128,8 @@ export const signup = async (req, res) => {
 
       // Alumni should provide some proof (degree/ID)
       if (!req.file) {
-        return res.status(400).json({ 
-          error: "Degree certificate or Alumni ID is required for verification" 
+        return res.status(400).json({
+          error: "Degree certificate or Alumni ID is required for verification",
         });
       }
     }
@@ -142,7 +145,8 @@ export const signup = async (req, res) => {
     let verificationDocUrl = "";
     if (req.file) {
       try {
-        const folderName = role === "alumni" ? "alumni-documents" : "student-ids";
+        const folderName =
+          role === "alumni" ? "alumni-documents" : "student-ids";
         const uploadedDoc = await cloudinary.uploader.upload(req.file.path, {
           folder: folderName,
           resource_type: "auto",
@@ -151,8 +155,8 @@ export const signup = async (req, res) => {
         fs.unlinkSync(req.file.path);
       } catch (uploadError) {
         console.error("Cloudinary upload error:", uploadError);
-        return res.status(500).json({ 
-          error: "Failed to upload verification document" 
+        return res.status(500).json({
+          error: "Failed to upload verification document",
         });
       }
     }
@@ -178,7 +182,8 @@ export const signup = async (req, res) => {
       userData.graduationYear = parseInt(passoutYear);
       userData.admissionYear = parseInt(passoutYear) - 4; // Estimate
       userData.currentYear = 5; // Graduated
-      
+      userData.role = "alumni";
+
       // Store personal email if provided
       if (personalEmail && personalEmail !== email) {
         userData.personalEmail = personalEmail;
@@ -193,12 +198,14 @@ export const signup = async (req, res) => {
     }
 
     // ✅ Send welcome email
-    const emailSubject = role === "alumni" 
-      ? "Welcome Alumni - CollegeConnect Account Under Review"
-      : "Welcome to CollegeConnect - Account Under Review";
+    const emailSubject =
+      role === "alumni"
+        ? "Welcome Alumni - CollegeConnect Account Under Review"
+        : "Welcome to CollegeConnect - Account Under Review";
 
-    const emailBody = role === "alumni" 
-      ? `
+    const emailBody =
+      role === "alumni"
+        ? `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #10B981;">Welcome Back, ${name}! 🎓</h2>
           <p>Your alumni account has been created successfully.</p>
@@ -212,7 +219,7 @@ export const signup = async (req, res) => {
           <p style="color: #6B7280;">Thanks,<br/>CollegeConnect Team</p>
         </div>
       `
-      : `
+        : `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #4F46E5;">Welcome to CollegeConnect, ${name}! 🎓</h2>
           <p>Your account has been created successfully.</p>
@@ -253,16 +260,17 @@ export const signup = async (req, res) => {
         updatedAt: user.updatedAt,
       },
       success: true,
-      message: role === "alumni"
-        ? "Alumni account created! Please wait for admin verification."
-        : "Account created! Please wait for admin verification.",
+      message:
+        role === "alumni"
+          ? "Alumni account created! Please wait for admin verification."
+          : "Account created! Please wait for admin verification.",
     });
   } catch (error) {
     console.error("Signup error:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Signup failed", 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: "Signup failed",
+      details: error.message,
     });
   }
 };
@@ -284,7 +292,8 @@ export const login = async (req, res) => {
       return res.status(403).json({
         error: "Account pending verification.",
         verificationStatus: "pending",
-        message: "Your account is under review. Please wait for admin approval.",
+        message:
+          "Your account is under review. Please wait for admin approval.",
       });
     }
 
@@ -292,7 +301,8 @@ export const login = async (req, res) => {
       return res.status(403).json({
         error: "Account verification rejected",
         verificationStatus: "rejected",
-        rejectionReason: user.rejectionReason || "Please contact admin for details.",
+        rejectionReason:
+          user.rejectionReason || "Please contact admin for details.",
         message: "Your account was not approved.",
       });
     }
@@ -300,7 +310,9 @@ export const login = async (req, res) => {
     if (user.verificationStatus === "approved") {
       const roleUpdate = await user.updateRoleIfNeeded();
       if (roleUpdate && roleUpdate.updated) {
-        console.log(`Role auto-updated for ${user.email}: ${roleUpdate.oldRole} → ${roleUpdate.newRole}`);
+        console.log(
+          `Role auto-updated for ${user.email}: ${roleUpdate.oldRole} → ${roleUpdate.newRole}`
+        );
       }
     }
 
@@ -325,10 +337,10 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Login failed", 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: "Login failed",
+      details: error.message,
     });
   }
 };
@@ -343,10 +355,10 @@ export const logout = async (req, res) => {
     });
     res.status(200).json({ success: true, message: "Logged out successfully" });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: "Logout failed", 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: "Logout failed",
+      details: error.message,
     });
   }
 };
@@ -382,7 +394,9 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword)
-    return res.status(400).json({ error: "Token and new password are required" });
+    return res
+      .status(400)
+      .json({ error: "Token and new password are required" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
@@ -428,25 +442,18 @@ export const validateResetToken = async (req, res) => {
   }
 };
 
-
 // ============================================
 // OPTION 3: ADMIN MANUALLY ADD ALUMNI
 // New endpoint for admin to add alumni
 // ============================================
 export const adminAddAlumni = async (req, res) => {
   try {
-    const { 
-      name, 
-      email, 
-      personalEmail,
-      passoutYear, 
-      branch,
-      course 
-    } = req.body;
+    const { name, email, personalEmail, passoutYear, branch, course } =
+      req.body;
 
     if (!name || !email || !passoutYear) {
-      return res.status(400).json({ 
-        error: "Name, email, and passout year are required" 
+      return res.status(400).json({
+        error: "Name, email, and passout year are required",
       });
     }
 
@@ -533,10 +540,10 @@ export const adminAddAlumni = async (req, res) => {
     });
   } catch (error) {
     console.error("Admin add alumni error:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to add alumni", 
-      details: error.message 
+    res.status(500).json({
+      success: false,
+      error: "Failed to add alumni",
+      details: error.message,
     });
   }
 };

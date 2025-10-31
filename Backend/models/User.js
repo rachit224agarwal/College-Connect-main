@@ -1,7 +1,3 @@
-// ============================================
-// FIXED: Backend/models/User.js
-// ============================================
-
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -38,10 +34,6 @@ const userSchema = new mongoose.Schema(
       enum: ["student", "senior", "alumni", "admin"],
       default: "student",
     },
-
-    // ============================================
-    // ACADEMIC FIELDS
-    // ============================================
     admissionYear: {
       type: Number,
       required: function () {
@@ -73,9 +65,6 @@ const userSchema = new mongoose.Schema(
       default: Date.now,
     },
 
-    // ============================================
-    // OTHER FIELDS
-    // ============================================
     verificationStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],
@@ -319,11 +308,23 @@ userSchema.pre("save", function (next) {
       this.graduationYear
     );
 
-    // Also set initial role based on year
-    if (this.currentYear >= 4) {
-      this.role = "senior";
-    } else {
-      this.role = "student";
+    if (this.role !== "alumni") {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+
+      const hasGraduated =
+        currentYear > this.graduationYear ||
+        (currentYear === this.graduationYear && currentMonth >= 6);
+
+      if (hasGraduated) {
+        this.role = "alumni";
+        this.currentYear = 5;
+      } else if (this.currentYear >= 4) {
+        this.role = "senior";
+      } else {
+        this.role = "student";
+      }
     }
   }
 
@@ -353,20 +354,3 @@ const User = mongoose.model("User", userSchema);
 
 export default User;
 
-// ============================================
-// EXAMPLE CALCULATIONS (for reference)
-// ============================================
-// Admission: 2023, Current Date: Oct 2025
-// - Years since admission: 2025 - 2023 = 2
-// - Current month: 9 (October) >= 7 (August), so no adjustment
-// - Calculated year: 2 + 1 = 3 (3rd year) ✅
-//
-// Admission: 2023, Current Date: June 2025
-// - Years since admission: 2025 - 2023 = 2
-// - Current month: 5 (June) < 7, so subtract 1 → yearsSince = 1
-// - Calculated year: 1 + 1 = 2 (2nd year) ✅
-//
-// Admission: 2021, Current Date: Oct 2025
-// - Years since admission: 2025 - 2021 = 4
-// - Current month: 9 >= 7
-// - Calculated year: 4 + 1 = 5 (Graduated/Alumni) ✅

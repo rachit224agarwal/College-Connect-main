@@ -7,6 +7,7 @@ export const getAlumni = async (req, res) => {
       role: "alumni",
       verificationStatus: "approved",
     };
+
     if (search) {
       query.$or = [
         {
@@ -26,7 +27,7 @@ export const getAlumni = async (req, res) => {
     }
 
     if (graduationYear) {
-      query.graduationYear = graduationYear;
+      query.graduationYear = parseInt(graduationYear);
     }
 
     if (skills) {

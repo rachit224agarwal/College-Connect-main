@@ -802,12 +802,12 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({
             <div className="flex items-start space-x-4 flex-1">
               <img
                 src={
-                  request.createdBy.avatar ||
-                  `https://ui-avatars.com/api/?name=${request.createdBy.name}`
+                  request.createdBy?.avatar ||
+                  `https://ui-avatars.com/api/?name=${request.createdBy?.name}`
                 }
-                alt={request.createdBy.name}
+                alt={request.createdBy?.name}
                 className="w-12 h-12 rounded-full cursor-pointer hover:ring-2 hover:ring-indigo-500 transition"
-                onClick={() => onViewProfile(request.createdBy._id)}
+                onClick={() => onViewProfile(request.createdBy?._id)}
                 title="View profile"
               />
               <div className="flex-1">
@@ -815,7 +815,7 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({
                   {request.title}
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Posted by {request.createdBy.name} ·{" "}
+                  Posted by {request.createdBy?.name} ·{" "}
                   {new Date(request.createdAt).toLocaleDateString()}
                 </p>
               </div>

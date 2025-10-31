@@ -13,53 +13,13 @@ import {
   GraduationCap,
   Users,
 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 // Mock useAuth hook for demo
-interface SignupFormData {
-  name: string;
-  email: string;
-  password: string;
-  role: "student" | "alumni";
-  admissionYear: string;
-  graduationYear: string;
-  passoutYear: string;
-  personalEmail: string;
-}
 
-interface UseAuth {
-  signup: (
-    name: string,
-    email: string,
-    password: string,
-    role: "student" | "alumni",
-    verificationFile: File | null,
-    admissionYear: string,
-    graduationYear: string,
-    passoutYear: string,
-    personalEmail: string
-  ) => Promise<{ success: boolean }>;
-}
 
-const useAuth = (): UseAuth => ({
-  signup: async (
-    ...args: [
-      string, // name
-      string, // email
-      string, // password
-      "student" | "alumni", // role
-      File | null, // verificationFile
-      string, // admissionYear
-      string, // graduationYear
-      string, // passoutYear
-      string // personalEmail
-    ]
-  ): Promise<{ success: boolean }> => {
-    console.log("Signup called with:", args);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return { success: true };
-  }
-});
+
+
 
 const Signup = () => {
   const [formData, setFormData] = useState<{
