@@ -186,9 +186,8 @@ npm run dev
 
 ## 🎥 Screenshots / Demo
 
-> *Add UI screenshots or Loom demo links here.*
+![College_Connect](https://github.com/user-attachments/assets/68b90a76-9b8c-4a2a-a440-b92b632feb4b)
 
-`![Screenshot](./assets/screenshot.png)`
 
 ---
 
@@ -201,6 +200,11 @@ npm run dev
 
 ---
 
+👨‍💻 Contributors
+<table> <tr> <td align="center"> <a href="https://github.com/rachit224agarwal"> <img src="https://avatars.githubusercontent.com/rachit224agarwal" width="80px;" alt="Rachit Agarwal"/><br /> <sub><b>Rachit Agarwal</b></sub> </a> </td> <td align="center"> <a href="https://github.com/Raunakushwa"> <img src="https://avatars.githubusercontent.com/Raunakushwa" width="80px;" alt="Raunak Kushwaha"/><br /> <sub><b>Raunak Kushwaha</b></sub> </a> </td> <td align="center"> <a href="https://github.com/2327cse1156"> <img src="https://avatars.githubusercontent.com/2327cse1156" width="80px;" alt="Ansh Kaushal"/><br /> <sub><b>Ansh Kaushal</b></sub> </a> </td> </tr> </table>
+
+---
+
 ## 📜 License
 
 This project is licensed under the **MIT License**.
@@ -210,3 +214,11 @@ This project is licensed under the **MIT License**.
 ## ⭐ Support
 
 If you like this project, consider giving it a **star on GitHub** to support development!
+
+---
+
+## 📬 Contact & Queries
+
+For any queries, feedback, or collaboration opportunities, feel free to reach out:  
+
+**Email:** [collegeconnect2k24@gmail.com](mailto:collegeconnect2k24@gmail.com)  
