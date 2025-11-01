@@ -45,7 +45,7 @@ interface TeamRequest {
       email: string;
       avatar?: string;
       skills?: string[];
-    };
+    } | null;
     message: string;
     status: string;
     appliedAt: string;
@@ -71,9 +71,8 @@ const TeamBuilder = () => {
   );
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
   const [formLoading, setFormLoading] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null); // ✅ For profile modal
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // ✅ Filter & Sort States
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     eventType: "all",
@@ -105,11 +104,9 @@ const TeamBuilder = () => {
     } else if (activeTab === "my-applications") {
       fetchMyApplications();
     }
-    // Load bookmarks from localStorage
     loadBookmarks();
   }, [activeTab]);
 
-  // ✅ Bookmark Management
   const loadBookmarks = () => {
     try {
       const saved = localStorage.getItem("teamBuilderBookmarks");
@@ -166,7 +163,6 @@ const TeamBuilder = () => {
       const res = await api.get(`/team-builder?${params.toString()}`);
       let requests = res.data.teamRequests;
 
-      //  Client-side sorting
       requests = sortRequests(requests);
       setTeamRequests(requests);
     } catch (error) {
@@ -177,7 +173,6 @@ const TeamBuilder = () => {
     }
   };
 
-  //  Sort function
   const sortRequests = (requests: TeamRequest[]) => {
     const sorted = [...requests];
 
@@ -199,7 +194,6 @@ const TeamBuilder = () => {
     }
   };
 
-  // Clear all filters
   const clearFilters = () => {
     setFilters({
       eventType: "all",
@@ -210,12 +204,10 @@ const TeamBuilder = () => {
     setSortBy("recent");
   };
 
-  // ✅ Re-fetch when filters change
   useEffect(() => {
     if (activeTab === "all") {
       fetchTeamRequests();
     }
-    // Load bookmarks on mount
     if (bookmarkedIds.length === 0) {
       loadBookmarks();
     }
@@ -411,14 +403,14 @@ const TeamBuilder = () => {
   const hasUserApplied = (request: TeamRequest) => {
     if (!currentUser) return false;
     return request.applications?.some(
-      (app) => app.user._id === currentUser._id
+      (app) => app.user && app.user._id === currentUser._id
     );
   };
 
   const isUserMember = (request: TeamRequest) => {
     if (!currentUser) return false;
     return request.teamMembers?.some(
-      (member) => member._id === currentUser._id
+      (member) => member && member._id === currentUser._id
     );
   };
 
@@ -438,7 +430,6 @@ const TeamBuilder = () => {
   return (
     <div className="space-y-8 min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold text-gray-900">Team Builder</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -446,7 +437,6 @@ const TeamBuilder = () => {
           </p>
         </div>
 
-        {/* Tabs */}
         <div className="flex items-center justify-center gap-2 bg-white rounded-lg shadow-sm p-2">
           <button
             onClick={() => setActiveTab("all")}
@@ -500,7 +490,6 @@ const TeamBuilder = () => {
           )}
         </div>
 
-        {/* Search and Filters */}
         {activeTab === "all" && (
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
@@ -516,7 +505,6 @@ const TeamBuilder = () => {
                 />
               </div>
 
-              {/* Sort Dropdown */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
@@ -556,7 +544,6 @@ const TeamBuilder = () => {
               )}
             </div>
 
-            {/* Advanced Filters Panel */}
             {showFilters && (
               <div className="bg-white rounded-lg shadow-sm p-4 space-y-4 border-2 border-indigo-100">
                 <div className="flex items-center justify-between mb-2">
@@ -572,7 +559,6 @@ const TeamBuilder = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Event Type Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Event Type
@@ -593,7 +579,6 @@ const TeamBuilder = () => {
                     </select>
                   </div>
 
-                  {/* Status Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Status
@@ -612,7 +597,6 @@ const TeamBuilder = () => {
                     </select>
                   </div>
 
-                  {/* Skills Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Required Skills
@@ -629,7 +613,6 @@ const TeamBuilder = () => {
                   </div>
                 </div>
 
-                {/* Active Filters Display */}
                 {(filters.eventType !== "all" ||
                   filters.status !== "all" ||
                   filters.skills ||
@@ -678,7 +661,6 @@ const TeamBuilder = () => {
           </div>
         )}
 
-        {/* Content based on active tab */}
         {activeTab === "all" && (
           <TeamRequestsList
             requests={teamRequests}
@@ -718,7 +700,6 @@ const TeamBuilder = () => {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
       {(showCreateModal || showEditModal) && (
         <RequestModal
           isEdit={showEditModal}
@@ -734,7 +715,6 @@ const TeamBuilder = () => {
         />
       )}
 
-      {/* Applications Modal */}
       {showApplicationsModal && selectedRequest && (
         <ApplicationsModal
           request={selectedRequest}
@@ -756,8 +736,6 @@ const TeamBuilder = () => {
   );
 };
 
-// ===== COMPONENT: Team Requests List =====
-// ===== COMPONENT: Team Requests List =====
 interface TeamRequestsListProps {
   requests: TeamRequest[];
   currentUser: any;
@@ -793,166 +771,169 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({
 
   return (
     <div className="space-y-6">
-      {requests.map((request: TeamRequest) => (
-        <div
-          key={request._id}
-          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-4 flex-1">
-              <img
-                src={
-                  request.createdBy?.avatar ||
-                  `https://ui-avatars.com/api/?name=${request.createdBy?.name}`
-                }
-                alt={request.createdBy?.name}
-                className="w-12 h-12 rounded-full cursor-pointer hover:ring-2 hover:ring-indigo-500 transition"
-                onClick={() => onViewProfile(request.createdBy?._id)}
-                title="View profile"
-              />
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {request.title}
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  Posted by {request.createdBy?.name} ·{" "}
-                  {new Date(request.createdAt).toLocaleDateString()}
-                </p>
+      {requests.map((request: TeamRequest) => {
+        // ✅ NULL SAFETY: Check if createdBy exists
+        if (!request.createdBy) return null;
+        
+        return (
+          <div
+            key={request._id}
+            className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-4 flex-1">
+                <img
+                  src={
+                    request.createdBy.avatar ||
+                    `https://ui-avatars.com/api/?name=${request.createdBy.name}`
+                  }
+                  alt={request.createdBy.name}
+                  className="w-12 h-12 rounded-full cursor-pointer hover:ring-2 hover:ring-indigo-500 transition"
+                  onClick={() => onViewProfile(request.createdBy._id)}
+                  title="View profile"
+                />
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {request.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    Posted by {request.createdBy.name} ·{" "}
+                    {new Date(request.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    request.status === "open"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {request.spotsAvailable}{" "}
+                  {request.spotsAvailable === 1 ? "spot" : "spots"} left
+                </span>
+                {isUserMember(request) && (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Member
+                  </span>
+                )}
+                {currentUser && onBookmark && isBookmarked && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onBookmark(request._id);
+                    }}
+                    className={`p-2 rounded-lg transition ${
+                      isBookmarked(request._id)
+                        ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                    }`}
+                    title={
+                      isBookmarked(request._id) ? "Remove bookmark" : "Bookmark"
+                    }
+                  >
+                    {isBookmarked(request._id) ? (
+                      <BookmarkCheck className="h-5 w-5" />
+                    ) : (
+                      <Bookmark className="h-5 w-5" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  request.status === "open"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {request.spotsAvailable}{" "}
-                {request.spotsAvailable === 1 ? "spot" : "spots"} left
-              </span>
-              {isUserMember(request) && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Member
+
+            <div className="mt-4">
+              <div className="flex items-center text-gray-600 mb-2">
+                <Code2 className="h-4 w-4 mr-2" />
+                <span className="font-medium">{request.event}</span>
+                <span className="mx-2">·</span>
+                <span className="text-sm">{request.eventType}</span>
+              </div>
+              <p className="text-gray-600 mb-4">{request.description}</p>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="text-sm font-medium text-gray-700">
+                  Skills needed:
                 </span>
-              )}
-              {/* ✅ SAFE BOOKMARK BUTTON - Only shows when function provided */}
-              {currentUser && onBookmark && isBookmarked && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onBookmark(request._id);
-                  }}
-                  className={`p-2 rounded-lg transition ${
-                    isBookmarked(request._id)
-                      ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                      : "bg-gray-100 text-gray-400 hover:bg-gray-200"
-                  }`}
-                  title={
-                    isBookmarked(request._id) ? "Remove bookmark" : "Bookmark"
-                  }
-                >
-                  {isBookmarked(request._id) ? (
-                    <BookmarkCheck className="h-5 w-5" />
-                  ) : (
-                    <Bookmark className="h-5 w-5" />
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <div className="flex items-center text-gray-600 mb-2">
-              <Code2 className="h-4 w-4 mr-2" />
-              <span className="font-medium">{request.event}</span>
-              <span className="mx-2">·</span>
-              <span className="text-sm">{request.eventType}</span>
-            </div>
-            <p className="text-gray-600 mb-4">{request.description}</p>
-
-            <div className="flex flex-wrap gap-2 mb-4">
-              <span className="text-sm font-medium text-gray-700">
-                Skills needed:
-              </span>
-              {request.skillsNeeded.map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-
-            {request.tags && request.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {request.tags.map((tag, idx) => (
+                {request.skillsNeeded.map((skill, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
+                    className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
                   >
-                    #{tag}
+                    {skill}
                   </span>
                 ))}
               </div>
-            )}
-          </div>
 
-          <div className="flex justify-between items-center mt-6">
-            <div className="flex items-center text-gray-600 text-sm">
-              <Users className="h-4 w-4 mr-1" />
-              {request.teamMembers?.length || 0} team member(s)
-            </div>
-            <div className="flex gap-2">
-              {currentUser && request.createdBy._id !== currentUser._id && (
-                <>
-                  {isUserMember(request) ? (
-                    <button
-                      disabled
-                      className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed"
+              {request.tags && request.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {request.tags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
                     >
-                      Already Joined
-                    </button>
-                  ) : hasUserApplied(request) ? (
-                    <button
-                      disabled
-                      className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg cursor-not-allowed flex items-center"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Application Pending
-                    </button>
-                  ) : request.status === "open" ? (
-                    <button
-                      onClick={() => onApply(request._id)}
-                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                    >
-                      Apply to Join
-                    </button>
-                  ) : (
-                    <button
-                      disabled
-                      className="px-6 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed"
-                    >
-                      Closed
-                    </button>
-                  )}
-                </>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
               )}
-              <button className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Message
-              </button>
+            </div>
+
+            <div className="flex justify-between items-center mt-6">
+              <div className="flex items-center text-gray-600 text-sm">
+                <Users className="h-4 w-4 mr-1" />
+                {request.teamMembers?.length || 0} team member(s)
+              </div>
+              <div className="flex gap-2">
+                {currentUser && request.createdBy._id !== currentUser._id && (
+                  <>
+                    {isUserMember(request) ? (
+                      <button
+                        disabled
+                        className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed"
+                      >
+                        Already Joined
+                      </button>
+                    ) : hasUserApplied(request) ? (
+                      <button
+                        disabled
+                        className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg cursor-not-allowed flex items-center"
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        Application Pending
+                      </button>
+                    ) : request.status === "open" ? (
+                      <button
+                        onClick={() => onApply(request._id)}
+                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                      >
+                        Apply to Join
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="px-6 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed"
+                      >
+                        Closed
+                      </button>
+                    )}
+                  </>
+                )}
+                <button className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Message
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
 
-// ===== COMPONENT: Bookmarked Requests List =====
 const BookmarkedRequestsList: React.FC<TeamRequestsListProps> = (props) => {
   if (props.requests.length === 0) {
     return (
@@ -971,7 +952,6 @@ const BookmarkedRequestsList: React.FC<TeamRequestsListProps> = (props) => {
   return <TeamRequestsList {...props} />;
 };
 
-// ===== COMPONENT: My Requests List =====
 interface MyRequestsListProps {
   requests: TeamRequest[];
   onEdit: (request: TeamRequest) => void;
@@ -1057,11 +1037,11 @@ const MyRequestsList: React.FC<MyRequestsListProps> = ({
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <span className="flex items-center">
                 <Users className="h-4 w-4 mr-1" />
-                {request.teamMembers?.length} member(s)
+                {request.teamMembers?.length || 0} member(s)
               </span>
               <span className="flex items-center">
                 <Clock className="h-4 w-4 mr-1" />
-                {request.applications?.length} application(s)
+                {request.applications?.length || 0} application(s)
               </span>
               <span>{request.spotsAvailable} spot(s) left</span>
             </div>
@@ -1073,7 +1053,7 @@ const MyRequestsList: React.FC<MyRequestsListProps> = ({
               View Applications (
               {
                 request.applications?.filter((a) => a.status === "pending")
-                  .length
+                  .length || 0
               }
               )
             </button>
@@ -1084,7 +1064,6 @@ const MyRequestsList: React.FC<MyRequestsListProps> = ({
   );
 };
 
-// ===== COMPONENT: My Applications List =====
 interface MyApplicationsListProps {
   applications: any[];
 }
@@ -1116,26 +1095,28 @@ const MyApplicationsList: React.FC<MyApplicationsListProps> = ({
                 {app.title}
               </h3>
               <p className="text-gray-600 text-sm">
-                {app.event} · Posted by {app.createdBy.name}
+                {app.event} · Posted by {app.createdBy?.name || "Unknown"}
               </p>
             </div>
             <span
               className={`px-3 py-1 rounded-full text-sm font-medium ${
-                app.myApplication.status === "pending"
+                app.myApplication?.status === "pending"
                   ? "bg-yellow-100 text-yellow-700"
-                  : app.myApplication.status === "accepted"
+                  : app.myApplication?.status === "accepted"
                   ? "bg-green-100 text-green-700"
                   : "bg-red-100 text-red-700"
               }`}
             >
-              {app.myApplication.status.charAt(0).toUpperCase() +
-                app.myApplication.status.slice(1)}
+              {app.myApplication?.status
+                ? app.myApplication.status.charAt(0).toUpperCase() +
+                  app.myApplication.status.slice(1)
+                : "Unknown"}
             </span>
           </div>
 
           <p className="text-gray-600 mb-4">{app.description}</p>
 
-          {app.myApplication.message && (
+          {app.myApplication?.message && (
             <div className="bg-gray-50 rounded-lg p-3 mb-4">
               <p className="text-sm font-medium text-gray-700">Your Message:</p>
               <p className="text-sm text-gray-600">
@@ -1145,7 +1126,7 @@ const MyApplicationsList: React.FC<MyApplicationsListProps> = ({
           )}
 
           <div className="flex flex-wrap gap-2">
-            {app.skillsNeeded.map((skill: string, idx: number) => (
+            {app.skillsNeeded?.map((skill: string, idx: number) => (
               <span
                 key={idx}
                 className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
@@ -1158,9 +1139,11 @@ const MyApplicationsList: React.FC<MyApplicationsListProps> = ({
           <div className="flex items-center justify-between pt-4 border-t mt-4">
             <p className="text-sm text-gray-500">
               Applied on{" "}
-              {new Date(app.myApplication.appliedAt).toLocaleDateString()}
+              {app.myApplication?.appliedAt
+                ? new Date(app.myApplication.appliedAt).toLocaleDateString()
+                : "Unknown"}
             </p>
-            {app.myApplication.status === "accepted" && (
+            {app.myApplication?.status === "accepted" && (
               <span className="flex items-center text-green-600 font-medium">
                 <CheckCircle className="h-4 w-4 mr-1" />
                 You're now a team member!
@@ -1173,7 +1156,6 @@ const MyApplicationsList: React.FC<MyApplicationsListProps> = ({
   );
 };
 
-// ===== COMPONENT: Request Modal =====
 interface RequestModalProps {
   isEdit: boolean;
   form: any;
@@ -1366,7 +1348,6 @@ const RequestModal: React.FC<RequestModalProps> = ({
   </div>
 );
 
-// ===== COMPONENT: Applications Modal =====
 interface ApplicationsModalProps {
   request: TeamRequest;
   onClose: () => void;
@@ -1375,24 +1356,21 @@ interface ApplicationsModalProps {
     applicationId: string,
     action: "accept" | "reject"
   ) => void;
-  onViewProfile?: (userId: string) => void; // ✅ Add this
+  onViewProfile?: (userId: string) => void;
 }
 
 const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
   request,
   onClose,
   onAction,
-  onViewProfile, // ✅ Add this
+  onViewProfile,
 }) => {
-  const pendingApps = request.applications.filter(
-    (app: any) => app.status === "pending"
-  );
-  const acceptedApps = request.applications.filter(
-    (app: any) => app.status === "accepted"
-  );
-  const rejectedApps = request.applications.filter(
-    (app: any) => app.status === "rejected"
-  );
+  // Filter out falsy users to avoid null dereferences in render
+  const validApplications = request.applications.filter((app) => !!app.user);
+
+  const pendingApps = validApplications.filter((app) => app.status === "pending");
+  const acceptedApps = validApplications.filter((app) => app.status === "accepted");
+  const rejectedApps = validApplications.filter((app) => app.status === "rejected");
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -1414,7 +1392,6 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Pending Applications */}
           {pendingApps.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -1422,19 +1399,19 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
                 Pending ({pendingApps.length})
               </h4>
               <div className="space-y-4">
-                {pendingApps.map((app: any) => (
+                {pendingApps.map((app) => (
                   <div key={app._id} className="border rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <img
                           src={
-                            app.user.avatar ||
-                            `https://ui-avatars.com/api/?name=${app.user.name}`
+                            app.user?.avatar ||
+                            `https://ui-avatars.com/api/?name=${app.user?.name || "User"}`
                           }
-                          alt={app.user.name}
+                          alt={app.user?.name || "User"}
                           className="w-12 h-12 rounded-full cursor-pointer hover:ring-2 hover:ring-indigo-500 transition"
                           onClick={() =>
-                            onViewProfile && onViewProfile(app.user._id)
+                            onViewProfile && app.user && onViewProfile(app.user._id)
                           }
                           title="View profile"
                         />
@@ -1442,13 +1419,13 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
                           <h5
                             className="font-semibold text-gray-900 cursor-pointer hover:text-indigo-600"
                             onClick={() =>
-                              onViewProfile && onViewProfile(app.user._id)
+                              onViewProfile && app.user && onViewProfile(app.user._id)
                             }
                           >
-                            {app.user.name}
+                            {app.user?.name || "User"}
                           </h5>
                           <p className="text-sm text-gray-600">
-                            {app.user.email}
+                            {app.user?.email || ""}
                           </p>
                         </div>
                       </div>
@@ -1457,7 +1434,7 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
                       </span>
                     </div>
 
-                    {app.user.skills && app.user.skills.length > 0 && (
+                    {app.user?.skills && app.user.skills.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {app.user.skills.map((skill: string, idx: number) => (
                           <span
@@ -1498,7 +1475,6 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
             </div>
           )}
 
-          {/* Accepted Applications */}
           {acceptedApps.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -1506,7 +1482,7 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
                 Accepted ({acceptedApps.length})
               </h4>
               <div className="space-y-3">
-                {acceptedApps.map((app: any) => (
+                {acceptedApps.map((app) => (
                   <div
                     key={app._id}
                     className="border border-green-200 bg-green-50 rounded-lg p-4"
@@ -1514,18 +1490,18 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
                     <div className="flex items-center gap-3">
                       <img
                         src={
-                          app.user.avatar ||
-                          `https://ui-avatars.com/api/?name=${app.user.name}`
+                          app.user?.avatar ||
+                          `https://ui-avatars.com/api/?name=${app.user?.name || "User"}`
                         }
-                        alt={app.user.name}
+                        alt={app.user?.name || "User"}
                         className="w-10 h-10 rounded-full"
                       />
                       <div className="flex-1">
                         <h5 className="font-medium text-gray-900">
-                          {app.user.name}
+                          {app.user?.name || "User"}
                         </h5>
                         <p className="text-xs text-gray-600">
-                          {app.user.email}
+                          {app.user?.email || ""}
                         </p>
                       </div>
                       <span className="px-3 py-1 bg-green-200 text-green-800 rounded-full text-xs font-medium">
@@ -1538,7 +1514,6 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
             </div>
           )}
 
-          {/* Rejected Applications */}
           {rejectedApps.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -1546,7 +1521,7 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
                 Rejected ({rejectedApps.length})
               </h4>
               <div className="space-y-3">
-                {rejectedApps.map((app: any) => (
+                {rejectedApps.map((app) => (
                   <div
                     key={app._id}
                     className="border border-gray-200 bg-gray-50 rounded-lg p-3"
@@ -1554,15 +1529,15 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
                     <div className="flex items-center gap-3">
                       <img
                         src={
-                          app.user.avatar ||
-                          `https://ui-avatars.com/api/?name=${app.user.name}`
+                          app.user?.avatar ||
+                          `https://ui-avatars.com/api/?name=${app.user?.name || "User"}`
                         }
-                        alt={app.user.name}
+                        alt={app.user?.name || "User"}
                         className="w-8 h-8 rounded-full"
                       />
                       <div>
                         <p className="text-sm font-medium text-gray-700">
-                          {app.user.name}
+                          {app.user?.name || "User"}
                         </p>
                       </div>
                     </div>
@@ -1572,7 +1547,7 @@ const ApplicationsModal: React.FC<ApplicationsModalProps> = ({
             </div>
           )}
 
-          {request.applications.length === 0 && (
+          {validApplications.length === 0 && (
             <div className="text-center py-12">
               <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h4 className="text-lg font-medium text-gray-900 mb-2">

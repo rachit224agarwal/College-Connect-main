@@ -121,8 +121,9 @@ export const createTeamRequest = async (req, res) => {
       hackathonId: hackathonId || null,
     });
 
-    const populatedRequest = await TeamRequest.findById(teamRequest._id)
-      .populate("createdBy", "name email avatar");
+    const populatedRequest = await TeamRequest.findById(
+      teamRequest._id
+    ).populate("createdBy", "name email avatar");
 
     res.status(201).json({
       success: true,
@@ -349,14 +350,19 @@ export const handleApplication = async (req, res) => {
     }
 
     if (action === "accept") {
+      if (teamRequest.spotsAvailable <= 0) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "No spots available to accept new members. This team is already full.",
+        });
+      }
       // Add to team members
       teamRequest.teamMembers.push(application.user);
       application.status = "accepted";
 
       // Decrease spots available
-      if (teamRequest.spotsAvailable > 0) {
-        teamRequest.spotsAvailable -= 1;
-      }
+    teamRequest.spotsAvailable -= 1;
 
       // Close request if no spots left
       if (teamRequest.spotsAvailable === 0) {
@@ -366,7 +372,7 @@ export const handleApplication = async (req, res) => {
       application.status = "rejected";
     }
 
-    await teamRequest.save();
+    await teamRequest.save({ validateBeforeSave: false });
 
     res.status(200).json({
       success: true,
