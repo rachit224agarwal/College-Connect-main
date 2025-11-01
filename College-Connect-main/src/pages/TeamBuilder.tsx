@@ -20,6 +20,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import UserProfileModal from "../components/UserProfileModal";
+import { useNavigate } from "react-router-dom";
 
 interface TeamRequest {
   _id: string;
@@ -768,6 +769,21 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({
       </div>
     );
   }
+  const navigate = useNavigate();
+
+  const handleStartChat = async (participantId:string) => {
+    if(!currentUser) {
+       toast.error("Please login to chat");
+       return;
+    }
+    try {
+      const res = await api.post("/chat/conversations",{participantId});
+      const conversationId = res.data.conversation._id;
+      navigate(`/chat/${conversationId}`);
+    } catch (error:any) {
+      toast.error(error.response?.data?.error || "Failed to start chat");
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -921,7 +937,7 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({
                     )}
                   </>
                 )}
-                <button className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <button onClick={()=> handleStartChat(request.createdBy._id)} className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Message
                 </button>

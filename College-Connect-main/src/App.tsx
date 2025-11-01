@@ -17,32 +17,39 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./components/AdminDashboard.tsx";
 import ManageHackathons from "./pages/ManageHackathons.tsx";
+import ChatWindow from "./pages/ChatWindow.tsx";
+import { SocketProvider } from "./contexts/SocketContext.tsx";
+import Chat from "./pages/Chat.tsx";
 
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/hackathons" element={<Hackathons />} />
-            <Route path="/team-builder" element={<TeamBuilder />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/alumni" element={<Alumni />} />
-            <Route path="/seniors" element={<Seniors />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/admin" element={<AdminDashboard/>}/>
-            <Route path="/admin/hackathons" element={<ManageHackathons/>}/>
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-      <Toaster position="top-right" />
+      <SocketProvider>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+          <Navbar />
+          <main className="flex-grow container mx-auto px-4 py-8">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/hackathons" element={<Hackathons />} />
+              <Route path="/team-builder" element={<TeamBuilder />} />
+              <Route path="/resources" element={<Resources />} />
+              <Route path="/alumni" element={<Alumni />} />
+              <Route path="/seniors" element={<Seniors />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/hackathons" element={<ManageHackathons />} />
+              <Route path="/chat" element={<Chat/>}/>
+              <Route path="/chat/:conversationId" element={<ChatWindow />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+        <Toaster position="top-right" />
+      </SocketProvider>
     </AuthProvider>
   );
 }
