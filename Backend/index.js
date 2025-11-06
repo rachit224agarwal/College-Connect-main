@@ -121,6 +121,11 @@ io.on("connection", (socket) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.send("Backend is running successfully 🚀");
+});
+
+
 httpServer.listen(PORT, () => {
   console.log(`🚀 SERVER RUNNING on port ${PORT}`);
   console.log(`🔌 Socket.IO ready for connections`);
