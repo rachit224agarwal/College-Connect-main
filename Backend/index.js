@@ -14,7 +14,7 @@ import resourceRoutes from "./routes/resource.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import chatRoutes from "./routes/chat.js"
+import chatRoutes from "./routes/chat.js";
 
 dotenv.config();
 connectDB();
@@ -22,10 +22,13 @@ connectDB();
 const app = express();
 const httpServer = createServer(app);
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: FRONTEND_URL,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
   },
 });
 
@@ -33,7 +36,7 @@ app.set("io", io);
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: FRONTEND_URL,
     credentials: true,
   })
 );
@@ -48,13 +51,23 @@ app.use("/api/hackathons", hackathonRoutes);
 app.use("/api/network", networkRoutes);
 app.use("/api/team-builder", teamBuilderRoutes);
 app.use("/api/resources", resourceRoutes);
-app.use("/api/chat", chatRoutes)
+app.use("/api/chat", chatRoutes);
+app.use("/api/profile", profileRoutes);
 
-app.get("/api/health", (req, res) => {
-  res.json({ status: "OK", timestamp: new Date() });
+app.get("/", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "CollegeConnect Backend API is running",
+    timestamp: new Date(),
+  });
 });
 
-app.use("/api/profile", profileRoutes);
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date(),
+  });
+});
 
 app.use(notFoundHandler);
 app.use(errorHandler);
@@ -71,7 +84,7 @@ io.on("connection", (socket) => {
   socket.on("user:online", (userId) => {
     socket.userId = userId; // Store userId in socket for disconnect
     onlineUsers.set(userId, socket.id);
-    
+
     // ✅ FIXED: Changed to "users:online" (plural)
     io.emit("users:online", Array.from(onlineUsers.keys()));
     console.log(`✅ User ${userId} is online. Total online:`, onlineUsers.size);
@@ -104,12 +117,15 @@ io.on("connection", (socket) => {
   // User disconnects
   socket.on("disconnect", () => {
     console.log("❌ User Disconnected:", socket.id);
-    
+
     // Remove from online users using stored userId
     if (socket.userId) {
       onlineUsers.delete(socket.userId);
       io.emit("users:online", Array.from(onlineUsers.keys()));
-      console.log(`❌ User ${socket.userId} removed. Total online:`, onlineUsers.size);
+      console.log(
+        `❌ User ${socket.userId} removed. Total online:`,
+        onlineUsers.size
+      );
     }
   });
 
@@ -121,12 +137,8 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/", (req, res) => {
-  res.send("Backend is running successfully 🚀");
-});
-
-
 httpServer.listen(PORT, () => {
   console.log(`🚀 SERVER RUNNING on port ${PORT}`);
   console.log(`🔌 Socket.IO ready for connections`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
 });
