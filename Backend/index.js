@@ -22,7 +22,7 @@ connectDB();
 const app = express();
 const httpServer = createServer(app);
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://college-connect-main-8tj9.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://college-connect-main.vercel.app/";
 
 const io = new Server(httpServer, {
   cors: {
