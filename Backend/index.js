@@ -36,7 +36,7 @@ app.set("io", io);
 
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: FRONTEND_URL.replace(/\/$/,""),
     credentials: true,
   })
 );

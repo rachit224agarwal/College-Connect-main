@@ -37,8 +37,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     console.log("🔌 Creating socket for user:", currentUser._id);
-    
-    const newSocket = io("http://localhost:5000", {
+
+    const newSocket = io("https://college-connect-backend-51sw.onrender.com", {
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
@@ -52,7 +52,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     newSocket.on("connect", () => {
       console.log("✅ Socket connected:", newSocket.id);
       setIsConnected(true);
-      
+
       // Emit user online event
       newSocket.emit("user:online", currentUser._id);
       console.log("📤 Emitted user:online for:", currentUser._id);
