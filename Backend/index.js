@@ -61,6 +61,8 @@ app.get("/", (req, res) => {
     timestamp: new Date(),
   });
 });
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 
 app.get("/api/health", (req, res) => {
   res.json({
