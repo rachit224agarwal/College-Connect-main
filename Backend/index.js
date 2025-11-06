@@ -74,6 +74,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+
+
+
 // Online users tracking
 const onlineUsers = new Map();
 
@@ -136,6 +139,8 @@ io.on("connection", (socket) => {
     console.log(`👋 User ${userId} went offline manually`);
   });
 });
+console.log("Backend starting");
+
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 SERVER RUNNING on port ${PORT}`);
