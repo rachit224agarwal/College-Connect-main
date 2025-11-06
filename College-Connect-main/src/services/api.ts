@@ -2,7 +2,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "https://college-connect-backend-51sw.onrender.com",
   withCredentials: true,
   timeout: 15000,
   headers: {
