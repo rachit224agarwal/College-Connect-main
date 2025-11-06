@@ -38,7 +38,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     console.log("🔌 Creating socket for user:", currentUser._id);
 
-    const newSocket = io("https://college-connect-backend-51sw.onrender.com", {
+    const newSocket = io("https://college-connect-backend-51sw.onrender.com/api", {
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
