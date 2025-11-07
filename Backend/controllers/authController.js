@@ -1,6 +1,5 @@
 // ============================================
-// PART 1: FIXED Backend/controllers/authController.js
-// Alumni Registration - All 3 Options
+// FIXED: Token in Response + Cookies (Best of Both)
 // ============================================
 
 import User from "../models/User.js";
@@ -20,22 +19,25 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Helper to set HttpOnly cookie
-const sendTokenCookie = (res, user) => {
+// ⭐ UPDATED: Helper to generate and send token (both cookie + response)
+const sendTokenResponse = (res, user) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
+    expiresIn: "7d", // ⭐ Increased to 7 days
   });
 
+  // Set cookie (for backward compatibility)
   res.cookie("token", token, {
     httpOnly: true,
-    secure: false,
-    sameSite: "strict",
-    maxAge: 24 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
+
+  return token; // ⭐ Return token to include in response
 };
 
 // ============================================
-// SIGNUP - Students & Alumni (Options 1 & 2)
+// SIGNUP - Students & Alumni
 // ============================================
 export const signup = async (req, res) => {
   console.log("🚀 === SIGNUP STARTED ===");
@@ -49,8 +51,8 @@ export const signup = async (req, res) => {
       role,
       admissionYear,
       graduationYear,
-      passoutYear, // ✅ NEW: For direct alumni signup
-      personalEmail, // ✅ NEW: Alumni's personal email
+      passoutYear,
+      personalEmail,
     } = req.body;
 
     if (!name || !email || !password)
@@ -64,9 +66,7 @@ export const signup = async (req, res) => {
       "nit.edu",
     ];
 
-    // ============================================
-    // OPTION 1: STUDENT SIGNUP (Auto-upgrade later)
-    // ============================================
+    // Student validation
     if (role === "student") {
       const emailDomain = email.split("@")[1];
       if (!allowedDomains.includes(emailDomain))
@@ -93,7 +93,6 @@ export const signup = async (req, res) => {
         });
       }
 
-      // Student ID is required
       if (!req.file) {
         return res.status(400).json({
           error: "Student ID card is required for verification",
@@ -101,11 +100,8 @@ export const signup = async (req, res) => {
       }
     }
 
-    // ============================================
-    // OPTION 2: DIRECT ALUMNI SIGNUP
-    // ============================================
+    // Alumni validation
     if (role === "alumni") {
-      // Alumni can use personal email (no college domain check)
       if (!passoutYear) {
         return res.status(400).json({
           error: "Passout/Graduation year is required for alumni",
@@ -119,14 +115,12 @@ export const signup = async (req, res) => {
         return res.status(400).json({ error: "Invalid passout year format" });
       }
 
-      // Passout year should be in the past
       if (passout > currentYear) {
         return res.status(400).json({
           error: "Passout year cannot be in the future",
         });
       }
 
-      // Alumni should provide some proof (degree/ID)
       if (!req.file) {
         return res.status(400).json({
           error: "Degree certificate or Alumni ID is required for verification",
@@ -141,7 +135,7 @@ export const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Upload verification document to Cloudinary
+    // Upload verification document to Cloudinary
     let verificationDocUrl = "";
     if (req.file) {
       try {
@@ -161,13 +155,13 @@ export const signup = async (req, res) => {
       }
     }
 
-    // ✅ Create user
+    // Create user
     const userData = {
       name,
       email,
       password: hashedPassword,
       role: role || "student",
-      verificationStatus: "pending", // Both student & alumni need verification
+      verificationStatus: "pending",
       studentIdUrl: verificationDocUrl,
       isAdmin: false,
     };
@@ -178,13 +172,11 @@ export const signup = async (req, res) => {
       userData.graduationYear = parseInt(graduationYear);
       userData.currentYear = 1;
     } else if (role === "alumni") {
-      // Alumni data
       userData.graduationYear = parseInt(passoutYear);
-      userData.admissionYear = parseInt(passoutYear) - 4; // Estimate
-      userData.currentYear = 5; // Graduated
+      userData.admissionYear = parseInt(passoutYear) - 4;
+      userData.currentYear = 5;
       userData.role = "alumni";
 
-      // Store personal email if provided
       if (personalEmail && personalEmail !== email) {
         userData.personalEmail = personalEmail;
       }
@@ -197,7 +189,7 @@ export const signup = async (req, res) => {
       await user.updateRoleIfNeeded();
     }
 
-    // ✅ Send welcome email
+    // Send welcome email
     const emailSubject =
       role === "alumni"
         ? "Welcome Alumni - CollegeConnect Account Under Review"
@@ -246,7 +238,16 @@ export const signup = async (req, res) => {
       console.error("Email send error:", emailErr);
     }
 
+    // ⭐ Generate token for pending users too (optional - can skip for pending)
+    const token = sendTokenResponse(res, user);
+
     res.status(201).json({
+      success: true,
+      message:
+        role === "alumni"
+          ? "Alumni account created! Please wait for admin verification."
+          : "Account created! Please wait for admin verification.",
+      token, // ⭐ Token in response
       user: {
         _id: user._id,
         name: user.name,
@@ -259,11 +260,6 @@ export const signup = async (req, res) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-      success: true,
-      message:
-        role === "alumni"
-          ? "Alumni account created! Please wait for admin verification."
-          : "Account created! Please wait for admin verification.",
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -275,7 +271,9 @@ export const signup = async (req, res) => {
   }
 };
 
-// LOGIN - remains same
+// ============================================
+// ⭐ FIXED LOGIN - Token in Response
+// ============================================
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -316,9 +314,13 @@ export const login = async (req, res) => {
       }
     }
 
-    sendTokenCookie(res, user);
+    // ⭐ Generate token (sets cookie + returns token)
+    const token = sendTokenResponse(res, user);
 
     res.status(200).json({
+      success: true,
+      message: "Logged in successfully",
+      token, // ⭐ TOKEN IN RESPONSE - This is the fix!
       user: {
         _id: user._id,
         name: user.name,
@@ -332,8 +334,6 @@ export const login = async (req, res) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-      success: true,
-      message: "Logged in successfully",
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -351,7 +351,7 @@ export const logout = async (req, res) => {
     res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
     res.status(200).json({ success: true, message: "Logged out successfully" });
   } catch (error) {
@@ -375,7 +375,11 @@ export const forgotPassword = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_RESET_SECRET, {
       expiresIn: "1h",
     });
-    const resetUrl = `http://localhost:5173/reset-password?token=${token}`;
+    
+    // ⭐ Use production URL for reset
+    const resetUrl = process.env.NODE_ENV === "production"
+      ? `${process.env.FRONTEND_URL}/reset-password?token=${token}`
+      : `http://localhost:5173/reset-password?token=${token}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -442,10 +446,7 @@ export const validateResetToken = async (req, res) => {
   }
 };
 
-// ============================================
-// OPTION 3: ADMIN MANUALLY ADD ALUMNI
-// New endpoint for admin to add alumni
-// ============================================
+// ADMIN ADD ALUMNI
 export const adminAddAlumni = async (req, res) => {
   try {
     const { name, email, personalEmail, passoutYear, branch, course } =
@@ -457,24 +458,21 @@ export const adminAddAlumni = async (req, res) => {
       });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // Generate temporary password
     const tempPassword = Math.random().toString(36).slice(-8) + "Pass@123";
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-    // Create alumni user
     const alumni = await User.create({
       name,
       email,
       personalEmail: personalEmail || email,
       password: hashedPassword,
       role: "alumni",
-      verificationStatus: "approved", // Admin added, auto-approved
+      verificationStatus: "approved",
       graduationYear: parseInt(passoutYear),
       admissionYear: parseInt(passoutYear) - 4,
       currentYear: 5,
@@ -483,7 +481,11 @@ export const adminAddAlumni = async (req, res) => {
       isAdmin: false,
     });
 
-    // Send welcome email with credentials
+    // ⭐ Use production URL for login
+    const loginUrl = process.env.NODE_ENV === "production"
+      ? `${process.env.FRONTEND_URL}/login`
+      : "http://localhost:5173/login";
+
     try {
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
@@ -511,7 +513,7 @@ export const adminAddAlumni = async (req, res) => {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="http://localhost:5173/login" 
+              <a href="${loginUrl}" 
                  style="background: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
                 Login Now
               </a>
@@ -536,7 +538,7 @@ export const adminAddAlumni = async (req, res) => {
         role: alumni.role,
         passoutYear: alumni.graduationYear,
       },
-      tempPassword, // Send to admin (remove in production)
+      tempPassword,
     });
   } catch (error) {
     console.error("Admin add alumni error:", error);
