@@ -22,11 +22,22 @@ connectDB();
 const app = express();
 const httpServer = createServer(app);
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://college-connect-main.vercel.app/";
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL || "https://college-connect-main.vercel.app/"
+).replace(/\/$/, "");
+
+const allowedOrigins = [
+  FRONTEND_URL,
+  `${FRONTEND_URL}/`,
+  "http://localhost:5173",
+  "http://localhost:5000",
+];
+
+console.log("Allowed CORS origins:", allowedOrigins);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   },
@@ -36,8 +47,22 @@ app.set("io", io);
 
 app.use(
   cors({
-    origin: FRONTEND_URL.replace(/\/$/,""),
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      const isAllowed = allowedOrigins.some(
+        (allowedOrigin) => allowedOrigin.replace(/\/$/, "") === normalizedOrigin
+      );
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn(`Cors Blocked: ${origin}`);
+        callback(new Error("NOt allowed by cors"));
+      }
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(cookieParser());
@@ -61,8 +86,7 @@ app.get("/", (req, res) => {
     timestamp: new Date(),
   });
 });
-app.get('/favicon.ico', (req, res) => res.status(204).end());
-
+app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -75,9 +99,6 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-
-
-
 
 // Online users tracking
 const onlineUsers = new Map();
@@ -143,9 +164,10 @@ io.on("connection", (socket) => {
 });
 console.log("Backend starting");
 
-
 httpServer.listen(PORT, () => {
   console.log(`🚀 SERVER RUNNING on port ${PORT}`);
   console.log(`🔌 Socket.IO ready for connections`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`CORS enabled for :${allowedOrigins.join(", ")}`);
+  
 });
