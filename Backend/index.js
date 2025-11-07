@@ -35,12 +35,18 @@ const allowedOrigins = [
 
 console.log("Allowed CORS origins:", allowedOrigins);
 
+// ⭐ FIXED: Added explicit path for Socket.io
 const io = new Server(httpServer, {
+  path: "/socket.io/", // ⭐ Explicitly set Socket.io path (default, but good to be explicit)
   cors: {
     origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   },
+  // ⭐ Additional reliability options
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ['websocket', 'polling'], // Try websocket first
 });
 
 app.set("io", io);
@@ -57,7 +63,7 @@ app.use(
         callback(null, true);
       } else {
         console.warn(`Cors Blocked: ${origin}`);
-        callback(new Error("NOt allowed by cors"));
+        callback(new Error("Not allowed by cors"));
       }
     },
     credentials: true,
@@ -65,10 +71,12 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(cookieParser());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
+// ⭐ All API routes under /api prefix
 app.use("/api/auth", auth);
 app.use("/api/admin", adminRoutes);
 app.use("/api/role-transition", roleTranstionRoutes);
@@ -86,6 +94,7 @@ app.get("/", (req, res) => {
     timestamp: new Date(),
   });
 });
+
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 app.get("/api/health", (req, res) => {
@@ -95,6 +104,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// ⭐ IMPORTANT: Error handlers should be AFTER all routes but BEFORE Socket.io
 app.use(notFoundHandler);
 app.use(errorHandler);
 
@@ -110,8 +120,7 @@ io.on("connection", (socket) => {
   socket.on("user:online", (userId) => {
     socket.userId = userId; // Store userId in socket for disconnect
     onlineUsers.set(userId, socket.id);
-
-    // ✅ FIXED: Changed to "users:online" (plural)
+    
     io.emit("users:online", Array.from(onlineUsers.keys()));
     console.log(`✅ User ${userId} is online. Total online:`, onlineUsers.size);
   });
@@ -162,12 +171,12 @@ io.on("connection", (socket) => {
     console.log(`👋 User ${userId} went offline manually`);
   });
 });
-console.log("Backend starting");
+
+console.log("Backend starting...");
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 SERVER RUNNING on port ${PORT}`);
-  console.log(`🔌 Socket.IO ready for connections`);
+  console.log(`🔌 Socket.IO ready at path: /socket.io/`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`CORS enabled for :${allowedOrigins.join(", ")}`);
-  
+  console.log(`✅ CORS enabled for: ${allowedOrigins.join(", ")}`);
 });
