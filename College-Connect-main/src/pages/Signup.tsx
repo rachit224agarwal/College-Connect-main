@@ -227,6 +227,8 @@ const Signup = () => {
 
     try {
       setIsSubmitting(true);
+      console.log("Starting signup....");
+
       await signup(
         formData.name,
         formData.email,
@@ -238,15 +240,19 @@ const Signup = () => {
         formData.passoutYear,
         formData.personalEmail
       );
+      console.log("Signup resolved - navigating....");
       toast.success("Signup successful! Please wait for admin verification.");
       setTimeout(() => navigate("/login"), 1500);
     } catch (error) {
-      alert(
+      console.error("🔴 Signup error:", error);
+      toast.error(
         error instanceof Error
           ? error.message
           : "Failed to create account. Please try again."
       );
     } finally {
+      console.log("Signup finished , turnof loading");
+      
       setIsSubmitting(false);
     }
   };
