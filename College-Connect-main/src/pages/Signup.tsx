@@ -200,6 +200,8 @@ const Signup = () => {
 
   const handleSubmit = async (e: HandleSubmitEvent) => {
     e.preventDefault();
+    console.log("handle submit triggered");
+    
 
     if (emailError || passwordError || fileError) {
       alert("Please fix the errors before submitting");
