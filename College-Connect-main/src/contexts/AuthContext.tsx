@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         headers: { "Content-Type": "multipart/form-data" },
       });
       if(!res.data.success){
-        throw new Error(res.data.error || "Signup failed")
+        throw new Error(res.data.error || "Signup")
       }
 
       // ⭐ CRITICAL FIX: Store token in localStorage
