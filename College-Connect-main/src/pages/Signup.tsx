@@ -14,34 +14,29 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-
-// Mock useAuth hook for demo
-
-
-
-
+import toast from "react-hot-toast";
 
 const Signup = () => {
   const [formData, setFormData] = useState<{
-      name: string;
-      email: string;
-      password: string;
-      role: "student" | "alumni"; // Explicitly typed
-      admissionYear: string;
-      graduationYear: string;
-      passoutYear: string; // ✅ For alumni
-      personalEmail: string; // ✅ For alumni
+    name: string;
+    email: string;
+    password: string;
+    role: "student" | "alumni"; // Explicitly typed
+    admissionYear: string;
+    graduationYear: string;
+    passoutYear: string; // ✅ For alumni
+    personalEmail: string; // ✅ For alumni
   }>({
-      name: "",
-      email: "",
-      password: "",
-      role: "student", // ✅ Can be 'student' or 'alumni'
-      admissionYear: new Date().getFullYear().toString(),
-      graduationYear: "",
-      passoutYear: "", // ✅ For alumni
-      personalEmail: "", // ✅ For alumni
+    name: "",
+    email: "",
+    password: "",
+    role: "student", // ✅ Can be 'student' or 'alumni'
+    admissionYear: new Date().getFullYear().toString(),
+    graduationYear: "",
+    passoutYear: "", // ✅ For alumni
+    personalEmail: "", // ✅ For alumni
   });
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +50,7 @@ const Signup = () => {
 
   // College email domains (for students only)
   const allowedColleges = ["kiet.edu", "abc.edu", "xyz.edu"];
-  
+
   // Generate year options
   const currentYear = new Date().getFullYear();
   const admissionYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -70,7 +65,8 @@ const Signup = () => {
   const getPasswordStrength = (password: string): PasswordStrength => {
     if (password.length === 0) return { strength: "", color: "" };
     if (password.length < 6) return { strength: "Weak", color: "text-red-500" };
-    if (password.length < 10) return { strength: "Medium", color: "text-yellow-500" };
+    if (password.length < 10)
+      return { strength: "Medium", color: "text-yellow-500" };
     return { strength: "Strong", color: "text-green-500" };
   };
 
@@ -91,7 +87,7 @@ const Signup = () => {
     setFormData({ ...formData, email });
 
     const emailRegex: EmailValidator = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
+
     if (email && !emailRegex.test(email)) {
       setEmailError("Please enter a valid email address");
       return;
@@ -135,16 +131,21 @@ const Signup = () => {
     if (!file) return;
 
     setUploadProgress(true);
-    
-    const allowedTypes: string[] = ["image/jpeg", "image/png", "application/pdf", "image/jpg"];
-    
+
+    const allowedTypes: string[] = [
+      "image/jpeg",
+      "image/png",
+      "application/pdf",
+      "image/jpg",
+    ];
+
     if (!allowedTypes.includes(file.type)) {
       setFileError("Only JPG, PNG, and PDF files are allowed");
       setVerificationFile(null);
       setUploadProgress(false);
       return;
     }
-    
+
     const maxSize: number = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       setFileError("File size must be less than 5MB");
@@ -206,9 +207,11 @@ const Signup = () => {
     }
 
     if (!verificationFile) {
-      alert(formData.role === "alumni" 
-        ? "Please upload your degree certificate or alumni ID" 
-        : "Please upload your student ID card");
+      alert(
+        formData.role === "alumni"
+          ? "Please upload your degree certificate or alumni ID"
+          : "Please upload your student ID card"
+      );
       return;
     }
 
@@ -223,7 +226,7 @@ const Signup = () => {
     }
 
     try {
-      setLoading(true);
+      setIsSubmitting(true);
       await signup(
         formData.name,
         formData.email,
@@ -235,16 +238,16 @@ const Signup = () => {
         formData.passoutYear,
         formData.personalEmail
       );
-
-      alert(formData.role === "alumni"
-        ? "Alumni account created! Waiting for admin verification."
-        : "Account created! Waiting for admin verification.");
-      
-      navigate("/");
+      toast.success("Signup successful! Please wait for admin verification.");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to create account. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to create account. Please try again."
+      );
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -276,7 +279,7 @@ const Signup = () => {
                     ? "border-indigo-600 bg-indigo-50 text-indigo-700"
                     : "border-gray-300 hover:border-gray-400"
                 }`}
-                disabled={loading}
+                disabled={isSubmitting}
               >
                 <Users className="w-5 h-5 mr-2" />
                 <span className="font-medium">Student</span>
@@ -289,7 +292,7 @@ const Signup = () => {
                     ? "border-green-600 bg-green-50 text-green-700"
                     : "border-gray-300 hover:border-gray-400"
                 }`}
-                disabled={loading}
+                disabled={isSubmitting}
               >
                 <GraduationCap className="w-5 h-5 mr-2" />
                 <span className="font-medium">Alumni</span>
@@ -301,7 +304,10 @@ const Signup = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Full Name
               </label>
               <div className="relative">
@@ -310,19 +316,26 @@ const Signup = () => {
                   id="name"
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="pl-10 w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                   placeholder="Enter your full name"
                   required
-                  disabled={loading}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                {formData.role === "student" ? "College Email" : "Email Address"}
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                {formData.role === "student"
+                  ? "College Email"
+                  : "Email Address"}
               </label>
               <div className="relative">
                 <Mail className="absolute inset-y-0 left-3 my-auto text-gray-400 h-5 w-5" />
@@ -332,18 +345,27 @@ const Signup = () => {
                   value={formData.email}
                   onChange={handleEmailChange}
                   className="pl-10 w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  placeholder={formData.role === "student" ? "you@college.edu" : "your@email.com"}
+                  placeholder={
+                    formData.role === "student"
+                      ? "you@college.edu"
+                      : "your@email.com"
+                  }
                   required
-                  disabled={loading}
+                  disabled={isSubmitting}
                 />
               </div>
-              {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
+              {emailError && (
+                <p className="text-red-500 text-sm mt-1">{emailError}</p>
+              )}
             </div>
 
             {/* ✅ Alumni Personal Email */}
             {formData.role === "alumni" && (
               <div>
-                <label htmlFor="personalEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="personalEmail"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Personal Email (Optional)
                 </label>
                 <div className="relative">
@@ -352,10 +374,15 @@ const Signup = () => {
                     id="personalEmail"
                     type="email"
                     value={formData.personalEmail}
-                    onChange={(e) => setFormData({ ...formData, personalEmail: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        personalEmail: e.target.value,
+                      })
+                    }
                     className="pl-10 w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                     placeholder="personal@email.com"
-                    disabled={loading}
+                    disabled={isSubmitting}
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
@@ -366,7 +393,10 @@ const Signup = () => {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Password
               </label>
               <div className="relative">
@@ -379,18 +409,24 @@ const Signup = () => {
                   className="pl-10 pr-12 w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                   placeholder="Create a password"
                   required
-                  disabled={loading}
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-3 my-auto text-gray-400 hover:text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
               <div className="flex justify-between items-center mt-1">
-                {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
+                {passwordError && (
+                  <p className="text-red-500 text-sm">{passwordError}</p>
+                )}
                 {!passwordError && passwordStrength.strength && (
                   <p className={`text-sm ${passwordStrength.color}`}>
                     {passwordStrength.strength}
@@ -403,7 +439,10 @@ const Signup = () => {
             {formData.role === "student" && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="admissionYear" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="admissionYear"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Admission Year
                   </label>
                   <div className="relative">
@@ -411,20 +450,30 @@ const Signup = () => {
                     <select
                       id="admissionYear"
                       value={formData.admissionYear}
-                      onChange={(e) => setFormData({ ...formData, admissionYear: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          admissionYear: e.target.value,
+                        })
+                      }
                       className="pl-10 w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                       required
-                      disabled={loading}
+                      disabled={isSubmitting}
                     >
                       {admissionYears.map((year) => (
-                        <option key={year} value={year}>{year}</option>
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
                       ))}
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="graduationYear" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="graduationYear"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Expected Graduation
                   </label>
                   <div className="relative">
@@ -432,14 +481,21 @@ const Signup = () => {
                     <select
                       id="graduationYear"
                       value={formData.graduationYear}
-                      onChange={(e) => setFormData({ ...formData, graduationYear: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          graduationYear: e.target.value,
+                        })
+                      }
                       className="pl-10 w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                       required
-                      disabled={loading}
+                      disabled={isSubmitting}
                     >
                       <option value="">Select Year</option>
                       {graduationYears.map((year) => (
-                        <option key={year} value={year}>{year}</option>
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -450,7 +506,10 @@ const Signup = () => {
             {/* ✅ Alumni Passout Year */}
             {formData.role === "alumni" && (
               <div>
-                <label htmlFor="passoutYear" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="passoutYear"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Passout/Graduation Year
                 </label>
                 <div className="relative">
@@ -458,14 +517,18 @@ const Signup = () => {
                   <select
                     id="passoutYear"
                     value={formData.passoutYear}
-                    onChange={(e) => setFormData({ ...formData, passoutYear: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, passoutYear: e.target.value })
+                    }
                     className="pl-10 w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                     required
-                    disabled={loading}
+                    disabled={isSubmitting}
                   >
                     <option value="">Select Year</option>
                     {passoutYears.map((year) => (
-                      <option key={year} value={year}>{year}</option>
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -473,17 +536,31 @@ const Signup = () => {
             )}
 
             {/* Info Box */}
-            <div className={`${formData.role === "student" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"} border rounded-xl p-4`}>
+            <div
+              className={`${
+                formData.role === "student"
+                  ? "bg-blue-50 border-blue-200"
+                  : "bg-green-50 border-green-200"
+              } border rounded-xl p-4`}
+            >
               <p className="text-sm font-medium">
                 {formData.role === "student" ? (
                   <>
                     <span className="text-blue-800">📚 Students:</span>
-                    <span className="text-blue-700"> Your role will auto-update to Senior in 4th year and Alumni after graduation.</span>
+                    <span className="text-blue-700">
+                      {" "}
+                      Your role will auto-update to Senior in 4th year and
+                      Alumni after graduation.
+                    </span>
                   </>
                 ) : (
                   <>
                     <span className="text-green-800">🎓 Alumni:</span>
-                    <span className="text-green-700"> Welcome back! Verify your alumni status to reconnect with the community.</span>
+                    <span className="text-green-700">
+                      {" "}
+                      Welcome back! Verify your alumni status to reconnect with
+                      the community.
+                    </span>
                   </>
                 )}
               </p>
@@ -492,7 +569,9 @@ const Signup = () => {
             {/* File Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {formData.role === "student" ? "Student ID Card" : "Degree Certificate / Alumni ID"} 
+                {formData.role === "student"
+                  ? "Student ID Card"
+                  : "Degree Certificate / Alumni ID"}
                 <span className="text-red-500"> *</span>
               </label>
               {!verificationFile ? (
@@ -500,25 +579,35 @@ const Signup = () => {
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <Upload className="w-8 h-8 mb-2 text-gray-400" />
                     <p className="text-sm text-gray-500 mt-1">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
+                      <span className="font-semibold">Click to upload</span> or
+                      drag and drop
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (Max 5MB)</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      JPG, PNG or PDF (Max 5MB)
+                    </p>
                   </div>
                   <input
                     type="file"
                     className="hidden"
                     accept="image/jpeg,image/png,image/jpg,application/pdf"
                     onChange={handleFileChange}
-                    disabled={loading}
+                    disabled={isSubmitting}
                   />
                 </label>
               ) : (
-                <div className={`relative border-2 rounded-xl p-4 ${formData.role === "student" ? "border-indigo-500 bg-indigo-50" : "border-green-500 bg-green-50"}`}>
+                <div
+                  className={`relative border-2 rounded-xl p-4 ${
+                    formData.role === "student"
+                      ? "border-indigo-500 bg-indigo-50"
+                      : "border-green-500 bg-green-50"
+                  }`}
+                >
                   <button
+                    title="remove"
                     type="button"
                     onClick={removeFile}
                     className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
-                    disabled={loading}
+                    disabled={isSubmitting}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -527,11 +616,17 @@ const Signup = () => {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
                     </div>
                   ) : filePreview ? (
-                    <img src={filePreview} alt="File preview" className="w-full h-48 object-contain rounded-lg" />
+                    <img
+                      src={filePreview}
+                      alt="File preview"
+                      className="w-full h-48 object-contain rounded-lg"
+                    />
                   ) : (
                     <div className="flex items-center justify-center h-24">
                       <FileText className="w-12 h-12 text-indigo-600" />
-                      <span className="ml-2 text-sm text-gray-700 font-medium">{verificationFile.name}</span>
+                      <span className="ml-2 text-sm text-gray-700 font-medium">
+                        {verificationFile.name}
+                      </span>
                     </div>
                   )}
                   <p className="text-center text-xs text-green-600 font-medium mt-2">
@@ -539,7 +634,9 @@ const Signup = () => {
                   </p>
                 </div>
               )}
-              {fileError && <p className="text-red-500 text-sm mt-1">{fileError}</p>}
+              {fileError && (
+                <p className="text-red-500 text-sm mt-1">{fileError}</p>
+              )}
               <p className="text-xs text-gray-500 mt-2">
                 ⚠️ Your account will be verified by admin within 24-48 hours
               </p>
@@ -549,13 +646,18 @@ const Signup = () => {
             <button
               type="submit"
               className={`w-full py-3 px-4 text-white rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                formData.role === "student" 
-                  ? "bg-indigo-600 hover:bg-indigo-700" 
+                formData.role === "student"
+                  ? "bg-indigo-600 hover:bg-indigo-700"
                   : "bg-green-600 hover:bg-green-700"
               }`}
-              disabled={loading || emailError !== "" || passwordError !== "" || fileError !== ""}
+              disabled={
+                isSubmitting ||
+                emailError !== "" ||
+                passwordError !== "" ||
+                fileError !== ""
+              }
             >
-              {loading ? "Creating Account..." : "Create Account"}
+              {isSubmitting ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 
@@ -563,7 +665,10 @@ const Signup = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link to="/login" className="text-indigo-600 hover:text-indigo-500 font-medium">
+              <Link
+                to="/login"
+                className="text-indigo-600 hover:text-indigo-500 font-medium"
+              >
                 Sign in
               </Link>
             </p>
