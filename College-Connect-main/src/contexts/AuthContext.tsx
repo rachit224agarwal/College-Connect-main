@@ -66,7 +66,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    const token = localStorage.getItem("token");
+
+    if(token)
+    {
+      getProfile().catch(()=>{
+        setCurrentUser(null);
+        localStorage.removeItem("token");
+      }).finally(()=>{
+        setLoading(false);
+      });
+    } else{
+      setLoading(false);
+    }
+  },[]);
 
   const API_URL = import.meta.env.VITE_API_URL + "/auth";
   const PROFILE_URL = import.meta.env.VITE_API_URL + "/profile";

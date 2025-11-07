@@ -20,6 +20,7 @@ import ManageHackathons from "./pages/ManageHackathons.tsx";
 import ChatWindow from "./pages/ChatWindow.tsx";
 import { SocketProvider } from "./contexts/SocketContext.tsx";
 import Chat from "./pages/Chat.tsx";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 function App() {
   return (
@@ -30,20 +31,57 @@ function App() {
           <main className="flex-grow container mx-auto px-4 py-8">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/hackathons" element={<Hackathons />} />
               <Route path="/team-builder" element={<TeamBuilder />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/alumni" element={<Alumni />} />
               <Route path="/seniors" element={<Seniors />} />
+
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/hackathons" element={<ManageHackathons />} />
-              <Route path="/chat" element={<Chat/>}/>
-              <Route path="/chat/:conversationId" element={<ChatWindow />} />
+
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/hackathons"
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <ManageHackathons />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat/:conversationId"
+                element={
+                  <ProtectedRoute>
+                    <ChatWindow />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </main>
           <Footer />
