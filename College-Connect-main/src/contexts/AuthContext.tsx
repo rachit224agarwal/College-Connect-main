@@ -68,30 +68,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{
-    const token = localStorage.getItem("token");
-
-    if(token)
-    {
-      getProfile().catch(()=>{
-        setCurrentUser(null);
-        localStorage.removeItem("token");
-      }).finally(()=>{
-        setLoading(false);
-      });
-    } else{
-      setLoading(false);
-    }
-  },[]);
-
   const API_URL = import.meta.env.VITE_API_URL + "/auth";
   const PROFILE_URL = import.meta.env.VITE_API_URL + "/profile";
 
+  // ⭐ FIXED: Load token on mount and fetch profile
   useEffect(() => {
-    getProfile().catch(() => setCurrentUser(null));
+    const token = localStorage.getItem("token");
+    
+    if (token) {
+      // Set axios default header
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      
+      getProfile()
+        .catch(() => {
+          setCurrentUser(null);
+          localStorage.removeItem("token");
+          delete axios.defaults.headers.common["Authorization"];
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  // ✅ Signup
+  // ⭐ FIXED: Signup - Store token in localStorage
   const signup = async (
     name: string,
     email: string,
@@ -110,11 +112,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       formData.append("email", email);
       formData.append("password", password);
       formData.append("role", role);
+      
       if (role === "student") {
         if (admissionYear) formData.append("admissionYear", admissionYear);
         if (graduationYear) formData.append("graduationYear", graduationYear);
         if (verificationFile) formData.append("studentId", verificationFile);
       }
+      
       if (role === "alumni") {
         if (passoutYear) formData.append("passoutYear", passoutYear);
         if (personalEmail) formData.append("personalEmail", personalEmail);
@@ -125,6 +129,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      // ⭐ CRITICAL FIX: Store token in localStorage
+      if (res.data.token) {
+        localStorage.setItem("token", res.data.token);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+      }
 
       if (res.data.user.verificationStatus === "pending") {
         const message =
@@ -146,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // ✅ Login
+  // ⭐ FIXED: Login - Store token in localStorage
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
@@ -155,6 +165,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         { email, password },
         { withCredentials: true }
       );
+
+      // ⭐ CRITICAL FIX: Store token in localStorage
+      if (res.data.token) {
+        localStorage.setItem("token", res.data.token);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+        console.log("✅ Token stored in localStorage:", res.data.token);
+      }
+
       setCurrentUser(res.data.user);
       toast.success("Logged in successfully!");
     } catch (err: any) {
@@ -180,13 +198,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // ✅ Logout
+  // ⭐ FIXED: Logout - Remove token from localStorage
   const logout = async () => {
     try {
       await axios.post(`${API_URL}/logout`, {}, { withCredentials: true });
+      
+      // ⭐ Clear localStorage and axios header
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common["Authorization"];
+      
       setCurrentUser(null);
       toast.success("Logged out successfully!");
     } catch {
+      // Even if API fails, clear local data
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common["Authorization"];
+      setCurrentUser(null);
       toast.error("Logout failed");
     }
   };
@@ -194,7 +221,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // ✅ Get Profile
   const getProfile = async (): Promise<User | null> => {
     try {
-      const res = await axios.get(PROFILE_URL, { withCredentials: true });
+      const token = localStorage.getItem("token");
+      
+      const res = await axios.get(PROFILE_URL, { 
+        withCredentials: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      
       setCurrentUser(res.data.user);
       return res.data.user;
     } catch {
@@ -203,13 +236,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // ✅ Update Profile (Cloudinary avatar + new fields)
+  // ✅ Update Profile
   const updateProfile = async (data: FormData): Promise<User> => {
     try {
+      const token = localStorage.getItem("token");
+      
       const res = await axios.put(PROFILE_URL, data, {
         withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { 
+          "Content-Type": "multipart/form-data",
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
       });
+      
       setCurrentUser(res.data.user);
       toast.success("Profile updated!");
       return res.data.user;
