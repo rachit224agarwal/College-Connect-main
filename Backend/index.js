@@ -46,7 +46,7 @@ const io = new Server(httpServer, {
   // ⭐ Additional reliability options
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ['websocket', 'polling'], // Try websocket first
+  transports: ["websocket", "polling"], // Try websocket first
 });
 
 app.set("io", io);
@@ -120,7 +120,7 @@ io.on("connection", (socket) => {
   socket.on("user:online", (userId) => {
     socket.userId = userId; // Store userId in socket for disconnect
     onlineUsers.set(userId, socket.id);
-    
+
     io.emit("users:online", Array.from(onlineUsers.keys()));
     console.log(`✅ User ${userId} is online. Total online:`, onlineUsers.size);
   });
@@ -180,3 +180,16 @@ httpServer.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`✅ CORS enabled for: ${allowedOrigins.join(", ")}`);
 });
+
+if (process.env.NODE_ENV === "production") {
+  setInterval(async () => {
+    try {
+      await fetch(
+        "https://college-connect-backend-51sw.onrender.com/api/health"
+      );
+      console.log("Self ping to keep backend awake");
+    } catch (error) {
+      console.error("ping failed", error.message);
+    }
+  }, 4 * 60 * 1000);
+}
