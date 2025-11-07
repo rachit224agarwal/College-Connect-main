@@ -38,12 +38,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     console.log("🔌 Creating socket for user:", currentUser._id);
 
-    const newSocket = io("https://college-connect-backend-51sw.onrender.com/api", {
+    const newSocket = io("https://college-connect-backend-51sw.onrender.com", {
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      transports:["websocket","polling"]
     });
 
     // Set socket IMMEDIATELY before events
