@@ -93,7 +93,7 @@ const ProfileExtraFields = ({
               className="border rounded px-2 py-1 w-full focus:ring-1 focus:ring-indigo-500 outline-none"
             />
           ) : (
-            <p className="text-gray-600">
+            <p className="text-gray-600 break-all max-w-full overflow-hidden">
               {typeof form[key] === "string"
                 ? form[key] || "Not set"
                 : Array.isArray(form[key])
