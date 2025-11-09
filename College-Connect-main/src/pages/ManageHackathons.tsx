@@ -544,6 +544,7 @@ function ManageHackathons() {
                   {editMode ? "Edit Hackathon" : "Add New Hackathon"}
                 </h2>
                 <button
+                  title="closeModal"
                   onClick={closeModal}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -569,6 +570,7 @@ function ManageHackathons() {
                           className="w-full h-48 object-cover rounded-lg"
                         />
                         <button
+                          title="Image preview"
                           type="button"
                           onClick={() => {
                             setImageFile(null);
@@ -640,6 +642,7 @@ function ManageHackathons() {
                       Start Date *
                     </label>
                     <input
+                      title="start date"
                       type="date"
                       value={form.startDate}
                       onChange={(e) =>
@@ -656,6 +659,7 @@ function ManageHackathons() {
                       End Date *
                     </label>
                     <input
+                      title="end date"
                       type="date"
                       value={form.endDate}
                       onChange={(e) =>
@@ -689,6 +693,7 @@ function ManageHackathons() {
                       Type *
                     </label>
                     <select
+                      title="form type "
                       value={form.type}
                       onChange={(e) =>
                         setForm({ ...form, type: e.target.value })
