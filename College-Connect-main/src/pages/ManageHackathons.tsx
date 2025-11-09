@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { X, Plus, Edit, Trash2, Calendar, MapPin, Users, ExternalLink, Image as ImageIcon, Search, Filter } from "lucide-react";
+import {
+  X,
+  Plus,
+  Edit,
+  Trash2,
+  Calendar,
+  MapPin,
+  Users,
+  ExternalLink,
+  Image as ImageIcon,
+  Search,
+  Filter,
+} from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +34,6 @@ interface Hackathon {
   tags: string;
   requirements: string;
   registeredUsers?: any[];
-
 }
 
 function ManageHackathons() {
@@ -30,16 +41,18 @@ function ManageHackathons() {
   const [filteredHackathons, setFilteredHackathons] = useState<Hackathon[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [currentHackathon, setCurrentHackathon] = useState<Hackathon | null>(null);
+  const [currentHackathon, setCurrentHackathon] = useState<Hackathon | null>(
+    null
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   const API_URL = import.meta.env.VITE_API_URL;
-  
+
   const emptyForm: Hackathon = {
     title: "",
     description: "",
@@ -71,14 +84,15 @@ function ManageHackathons() {
     let filtered = [...hackathons];
 
     if (searchQuery) {
-      filtered = filtered.filter(h =>
-        h.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        h.location.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (h) =>
+          h.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          h.location.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     if (typeFilter !== "all") {
-      filtered = filtered.filter(h => h.type === typeFilter);
+      filtered = filtered.filter((h) => h.type === typeFilter);
     }
 
     setFilteredHackathons(filtered);
@@ -100,7 +114,7 @@ function ManageHackathons() {
     if (!file) return;
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("Only JPG, PNG, and WEBP images are allowed");
       return;
@@ -113,7 +127,7 @@ function ManageHackathons() {
     }
 
     setImageFile(file);
-    
+
     // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -129,8 +143,25 @@ function ManageHackathons() {
     try {
       const formData = new FormData();
 
-      Object.entries(form).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
+      const editableFields = {
+        title: form.title,
+        description: form.description,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        location: form.location,
+        type: form.type,
+        organizerName: form.organizerName,
+        organizerEmail: form.organizerEmail,
+        prizes: form.prizes,
+        expectedParticipants: form.expectedParticipants,
+        registrationDeadline: form.registrationDeadline,
+        websiteUrl: form.websiteUrl,
+        tags: form.tags,
+        requirements: form.requirements,
+      };
+
+      Object.entries(editableFields).forEach(([key, value]) => {
+        if (value && value.trim() !== "") formData.append(key, value);
       });
 
       if (imageFile) {
@@ -141,12 +172,18 @@ function ManageHackathons() {
         await axios.put(
           `${API_URL}/hackathons/${currentHackathon._id}`,
           formData,
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
         );
         toast.success("✅ Hackathon updated successfully!");
       } else {
         await axios.post(`${API_URL}/hackathons`, formData, {
           withCredentials: true,
+          headers:{
+            'Content-Type':"multipart/form-data"
+          }
         });
         toast.success("✅ Hackathon created successfully!");
       }
@@ -242,7 +279,9 @@ function ManageHackathons() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Hackathons</p>
-                <p className="text-3xl font-bold text-gray-900">{hackathons.length}</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {hackathons.length}
+                </p>
               </div>
               <div className="bg-blue-100 p-3 rounded-lg">
                 <Calendar className="h-8 w-8 text-blue-600" />
@@ -260,7 +299,10 @@ function ManageHackathons() {
               <div>
                 <p className="text-sm text-gray-600">Upcoming</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {hackathons.filter(h => new Date(h.startDate) > new Date()).length}
+                  {
+                    hackathons.filter((h) => new Date(h.startDate) > new Date())
+                      .length
+                  }
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -279,7 +321,10 @@ function ManageHackathons() {
               <div>
                 <p className="text-sm text-gray-600">Total Registrations</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {hackathons.reduce((sum, h) => sum + (h.registeredUsers?.length || 0), 0)}
+                  {hackathons.reduce(
+                    (sum, h) => sum + (h.registeredUsers?.length || 0),
+                    0
+                  )}
                 </p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -309,7 +354,9 @@ function ManageHackathons() {
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                showFilters ? "bg-indigo-600 text-white" : "border-gray-300 hover:bg-gray-50"
+                showFilters
+                  ? "bg-indigo-600 text-white"
+                  : "border-gray-300 hover:bg-gray-50"
               }`}
             >
               <Filter className="h-5 w-5" />
@@ -369,11 +416,15 @@ function ManageHackathons() {
                     </div>
                   )}
                   <div className="absolute top-3 right-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      h.type === "Online" ? "bg-green-500" :
-                      h.type === "Hybrid" ? "bg-yellow-500" :
-                      "bg-blue-500"
-                    } text-white`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        h.type === "Online"
+                          ? "bg-green-500"
+                          : h.type === "Hybrid"
+                          ? "bg-yellow-500"
+                          : "bg-blue-500"
+                      } text-white`}
+                    >
                       {h.type}
                     </span>
                   </div>
@@ -450,7 +501,9 @@ function ManageHackathons() {
           >
             <Calendar className="h-20 w-20 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-900 mb-2">
-              {hackathons.length === 0 ? "No Hackathons Yet" : "No Results Found"}
+              {hackathons.length === 0
+                ? "No Hackathons Yet"
+                : "No Results Found"}
             </h3>
             <p className="text-gray-600 mb-6">
               {hackathons.length === 0
@@ -498,7 +551,10 @@ function ManageHackathons() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+              <form
+                onSubmit={handleSubmit}
+                className="p-6 space-y-5 max-h-[70vh] overflow-y-auto"
+              >
                 {/* Image Upload */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -526,8 +582,12 @@ function ManageHackathons() {
                     ) : (
                       <label className="flex flex-col items-center justify-center h-32 cursor-pointer">
                         <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-600">Click to upload image</span>
-                        <span className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+                        <span className="text-sm text-gray-600">
+                          Click to upload image
+                        </span>
+                        <span className="text-xs text-gray-500 mt-1">
+                          PNG, JPG up to 5MB
+                        </span>
                         <input
                           type="file"
                           className="hidden"
@@ -548,7 +608,9 @@ function ManageHackathons() {
                     <input
                       type="text"
                       value={form.title}
-                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, title: e.target.value })
+                      }
                       required
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       placeholder="e.g., TechFest 2024"
@@ -562,7 +624,9 @@ function ManageHackathons() {
                     </label>
                     <textarea
                       value={form.description}
-                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, description: e.target.value })
+                      }
                       required
                       rows={3}
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -578,7 +642,9 @@ function ManageHackathons() {
                     <input
                       type="date"
                       value={form.startDate}
-                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, startDate: e.target.value })
+                      }
                       required
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                     />
@@ -592,7 +658,9 @@ function ManageHackathons() {
                     <input
                       type="date"
                       value={form.endDate}
-                      onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, endDate: e.target.value })
+                      }
                       required
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                     />
@@ -606,7 +674,9 @@ function ManageHackathons() {
                     <input
                       type="text"
                       value={form.location}
-                      onChange={(e) => setForm({ ...form, location: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, location: e.target.value })
+                      }
                       required
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                       placeholder="e.g., New Delhi"
@@ -620,7 +690,9 @@ function ManageHackathons() {
                     </label>
                     <select
                       value={form.type}
-                      onChange={(e) => setForm({ ...form, type: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, type: e.target.value })
+                      }
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                     >
                       <option value="In-Person">In-Person</option>
@@ -637,7 +709,9 @@ function ManageHackathons() {
                     <input
                       type="text"
                       value={form.prizes}
-                      onChange={(e) => setForm({ ...form, prizes: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, prizes: e.target.value })
+                      }
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                       placeholder="e.g., $5000"
                     />
@@ -651,7 +725,12 @@ function ManageHackathons() {
                     <input
                       type="text"
                       value={form.expectedParticipants}
-                      onChange={(e) => setForm({ ...form, expectedParticipants: e.target.value })}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          expectedParticipants: e.target.value,
+                        })
+                      }
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                       placeholder="e.g., 500+"
                     />
@@ -665,7 +744,9 @@ function ManageHackathons() {
                     <input
                       type="url"
                       value={form.websiteUrl}
-                      onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, websiteUrl: e.target.value })
+                      }
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                       placeholder="https://example.com"
                     />
@@ -679,7 +760,9 @@ function ManageHackathons() {
                     <input
                       type="text"
                       value={form.tags}
-                      onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, tags: e.target.value })
+                      }
                       className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500"
                       placeholder="AI, Web3, Mobile"
                     />

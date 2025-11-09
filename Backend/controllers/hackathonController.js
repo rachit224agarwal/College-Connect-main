@@ -141,27 +141,48 @@ export const updateHackathon = async (req, res) => {
     const { id } = req.params;
     const updates = { ...req.body };
 
-    // ⭐ FIX 1: Clean up registeredUsers array
-    if (updates.registeredUsers) {
-      // If it's a string (from form data), parse it
-      if (typeof updates.registeredUsers === "string") {
+    // ⭐ FIX 1: Clean up registeredUsers array - STRONG HANDLING
+    if (updates.hasOwnProperty('registeredUsers')) {
+      const registeredUsers = updates.registeredUsers;
+      
+      // Case 1: Empty string - DELETE the field
+      if (registeredUsers === '' || registeredUsers === 'undefined' || registeredUsers === 'null') {
+        delete updates.registeredUsers;
+      }
+      // Case 2: String array like "['']" or JSON string
+      else if (typeof registeredUsers === "string") {
         try {
-          updates.registeredUsers = JSON.parse(updates.registeredUsers);
+          const parsed = JSON.parse(registeredUsers);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter(
+              (id) => id && typeof id === "string" && id.trim() !== "" && id !== "null" && id !== "undefined"
+            );
+            if (filtered.length === 0) {
+              delete updates.registeredUsers;
+            } else {
+              updates.registeredUsers = filtered;
+            }
+          } else {
+            delete updates.registeredUsers;
+          }
         } catch (e) {
-          // If parsing fails, treat as empty array
-          updates.registeredUsers = [];
+          // Not valid JSON, delete it
+          delete updates.registeredUsers;
         }
       }
-
-      // Filter out empty strings and invalid IDs
-      if (Array.isArray(updates.registeredUsers)) {
-        updates.registeredUsers = updates.registeredUsers.filter(
+      // Case 3: Already an array
+      else if (Array.isArray(registeredUsers)) {
+        const filtered = registeredUsers.filter(
           (id) => id && typeof id === "string" && id.trim() !== "" && id !== "null" && id !== "undefined"
         );
+        if (filtered.length === 0) {
+          delete updates.registeredUsers;
+        } else {
+          updates.registeredUsers = filtered;
+        }
       }
-
-      // If array is empty after filtering, don't update this field
-      if (updates.registeredUsers.length === 0) {
+      // Case 4: Invalid type - delete it
+      else {
         delete updates.registeredUsers;
       }
     }
