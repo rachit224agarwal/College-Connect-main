@@ -55,60 +55,79 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (currentUser && !form.name) {
-      setForm((prev) => ({
-        ...prev,
-        name: currentUser.name || "",
-        bio: currentUser.bio || "",
-        location: currentUser.location || "",
-        skills: Array.isArray(currentUser.skills)
-          ? currentUser.skills
-          : currentUser.skills
-          ? [currentUser.skills]
-          : [],
-        avatar: currentUser.avatar || "",
-        resumeUrl: currentUser.resumeUrl || "",
-        yearOfAdmission: currentUser.admissionYear?.toString() || "",
-        yearOfGraduation: currentUser.graduationYear?.toString() || "",
-        course: currentUser.course || "",
-        branch: currentUser.branch || "",
-        college: currentUser.college || "",
-        website: currentUser.website || "",
-        linkedin: currentUser.linkedin || "",
-        github: currentUser.github || "",
-        activities: Array.isArray(currentUser.activities)
+    if (!currentUser) {
+      getProfile();
+      return;
+    }
+    setForm({
+      name: currentUser.name || "",
+      bio: currentUser.bio || "",
+      location: currentUser.location || "",
+      skills: Array.isArray(currentUser.skills)
+        ? currentUser.skills
+        : currentUser.skills
+        ? [currentUser.skills]
+        : [],
+      avatarFile: null,
+      avatar: currentUser.avatar || "",
+      resumeFile: null,
+      resumeUrl: currentUser.resumeUrl || "",
+      yearOfAdmission: currentUser.admissionYear?.toString() || "",
+      yearOfGraduation: currentUser.graduationYear?.toString() || "",
+      course: currentUser.course || "",
+      branch: currentUser.branch || "",
+      college: currentUser.college || "",
+      website: currentUser.website || "",
+      linkedin: currentUser.linkedin || "",
+      github: currentUser.github || "",
+      activities: Array.isArray(currentUser.activities)
         ? currentUser.activities
         : [],
-      }));
-    } else {
-      getProfile();
-    }
-  }, [currentUser]);
+    });
+  }, [currentUser?._id]);
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
       const formData = new FormData();
 
-   Object.entries(form).forEach(([key, value]) => {
-  if ((key === "avatarFile" || key === "resumeFile") && value instanceof File) {
-    formData.append(key === "avatarFile" ? "avatar" : "resume", value);
-  } else if (key === "skills" || key === "activities") {
-    formData.append(key, JSON.stringify(value)); 
-  } else if (typeof value === "string") {
-    formData.append(key, value);
-  }
-});
-
+      Object.entries(form).forEach(([key, value]) => {
+        if (
+          (key === "avatarFile" || key === "resumeFile") &&
+          value instanceof File
+        ) {
+          formData.append(key === "avatarFile" ? "avatar" : "resume", value);
+        } else if (key === "skills" || key === "activities") {
+          formData.append(key, JSON.stringify(value));
+        } else if (typeof value === "string") {
+          formData.append(key, value);
+        }
+      });
 
       // Send formData to backend
- const updatedProfile = await updateProfile(formData);
-setForm((prev) => ({
-  ...prev,
-  ...updatedProfile,
-  avatarFile: null,
-  resumeFile: null,
-}));
-
+      const updatedProfile = await updateProfile(formData);
+      setForm((prev) => ({
+        ...prev,
+        name: updatedProfile.name || prev.name,
+        bio: updatedProfile.bio || prev.bio,
+        location: updatedProfile.location || prev.location,
+        skills: updatedProfile.skills || prev.skills,
+        avatar: updatedProfile.avatar || prev.avatar,
+        resumeUrl: updatedProfile.resumeUrl || prev.resumeUrl,
+        yearOfAdmission:
+          updatedProfile.admissionYear?.toString() || prev.yearOfAdmission,
+        yearOfGraduation:
+          updatedProfile.graduationYear?.toString() || prev.yearOfGraduation,
+        course: updatedProfile.course || prev.course,
+        branch: updatedProfile.branch || prev.branch,
+        college: updatedProfile.college || prev.college,
+        website: updatedProfile.website || prev.website,
+        linkedin: updatedProfile.linkedin || prev.linkedin,
+        github: updatedProfile.github || prev.github,
+        activities: updatedProfile.activities || prev.activities,
+        avatarFile: null,
+        resumeFile: null,
+      }));
 
       toast.success("Profile updated successfully!");
       setIsEditing(false);
@@ -119,11 +138,15 @@ setForm((prev) => ({
       setLoading(false);
     }
   };
-  
 
   if (!currentUser)
     return (
-      <p className="text-center mt-12 text-gray-600">Loading Profile...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading Profile...</p>
+        </div>
+      </div>
     );
 
   return (
@@ -155,12 +178,7 @@ setForm((prev) => ({
       </div>
 
       {/* Recent Activity */}
-      <ProfileActivity
-  form={form}
-  setForm={setForm}
-  isEditing={isEditing}
-/>
-
+      <ProfileActivity form={form} setForm={setForm} isEditing={isEditing} />
     </div>
   );
 };
