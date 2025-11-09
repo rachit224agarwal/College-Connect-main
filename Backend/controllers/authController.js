@@ -1,48 +1,59 @@
 // ============================================
-// FIXED: Token in Response + Cookies (Best of Both)
+// Updated authController.js - SendGrid Integration
 // ============================================
 
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail"; // ⭐ SendGrid import
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
 import dotenv from "dotenv";
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// ⭐ SendGrid Configuration (Replaces nodemailer)
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// ⭐ UPDATED: Helper to generate and send token (both cookie + response)
+// ⭐ Helper function to send emails via SendGrid
+const sendEmail = async (to, subject, html) => {
+  try {
+    const msg = {
+      to,
+      from: process.env.SENDGRID_FROM_EMAIL, // Must be verified in SendGrid
+      subject,
+      html,
+    };
+    
+    await sgMail.send(msg);
+    console.log(`✅ Email sent to ${to}`);
+    return { success: true };
+  } catch (error) {
+    console.error("❌ SendGrid error:", error.response?.body || error.message);
+    return { success: false, error };
+  }
+};
+
+// Token response helper
 const sendTokenResponse = (res, user) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "7d", // ⭐ Increased to 7 days
+    expiresIn: "7d",
   });
 
-  // Set cookie (for backward compatibility)
   res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  return token; // ⭐ Return token to include in response
+  return token;
 };
 
 // ============================================
-// SIGNUP - Students & Alumni
+// SIGNUP
 // ============================================
 export const signup = async (req, res) => {
   console.log("🚀 === SIGNUP STARTED ===");
-  console.log("📦 Request Body:", req.body);
-  console.log("📎 File:", req.file);
   try {
     const {
       name,
@@ -128,14 +139,13 @@ export const signup = async (req, res) => {
       }
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ error: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Upload verification document to Cloudinary
+    // Upload verification document
     let verificationDocUrl = "";
     if (req.file) {
       try {
@@ -166,7 +176,6 @@ export const signup = async (req, res) => {
       isAdmin: false,
     };
 
-    // Add fields based on role
     if (role === "student") {
       userData.admissionYear = parseInt(admissionYear);
       userData.graduationYear = parseInt(graduationYear);
@@ -184,12 +193,11 @@ export const signup = async (req, res) => {
 
     const user = await User.create(userData);
 
-    // Auto-calculate role for students
     if (role === "student" && admissionYear && graduationYear) {
       await user.updateRoleIfNeeded();
     }
 
-    // Send welcome email
+    // ⭐ Send welcome email via SendGrid
     const emailSubject =
       role === "alumni"
         ? "Welcome Alumni - CollegeConnect Account Under Review"
@@ -206,7 +214,6 @@ export const signup = async (req, res) => {
             <p style="margin: 5px 0 0 0;"><strong>Passout Year:</strong> ${passoutYear}</p>
           </div>
           <p>Our admin team will verify your alumni status within 24-48 hours.</p>
-          <p><strong>⚠️ Important:</strong> Please update your profile with a personal email after verification to stay connected!</p>
           <br/>
           <p style="color: #6B7280;">Thanks,<br/>CollegeConnect Team</p>
         </div>
@@ -221,24 +228,14 @@ export const signup = async (req, res) => {
             <p style="margin: 5px 0 0 0;"><strong>Expected Graduation:</strong> ${graduationYear}</p>
           </div>
           <p>Our admin team will review your student ID and verify your account within 24-48 hours.</p>
-          <p>You'll receive an email once your account is approved.</p>
           <br/>
           <p style="color: #6B7280;">Thanks,<br/>CollegeConnect Team</p>
         </div>
       `;
 
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: emailSubject,
-        html: emailBody,
-      });
-    } catch (emailErr) {
-      console.error("Email send error:", emailErr);
-    }
+    // Send email (non-blocking)
+    sendEmail(user.email, emailSubject, emailBody);
 
-    // ⭐ Generate token for pending users too (optional - can skip for pending)
     const token = sendTokenResponse(res, user);
 
     res.status(201).json({
@@ -247,7 +244,7 @@ export const signup = async (req, res) => {
         role === "alumni"
           ? "Alumni account created! Please wait for admin verification."
           : "Account created! Please wait for admin verification.",
-      token, // ⭐ Token in response
+      token,
       user: {
         _id: user._id,
         name: user.name,
@@ -272,9 +269,10 @@ export const signup = async (req, res) => {
 };
 
 // ============================================
-// ⭐ FIXED LOGIN - Token in Response
+// LOGIN
 // ============================================
 export const login = async (req, res) => {
+  console.log("🔵 === LOGIN STARTED ===");
   try {
     const { email, password } = req.body;
     if (!email || !password)
@@ -314,13 +312,12 @@ export const login = async (req, res) => {
       }
     }
 
-    // ⭐ Generate token (sets cookie + returns token)
     const token = sendTokenResponse(res, user);
 
     res.status(200).json({
       success: true,
       message: "Logged in successfully",
-      token, // ⭐ TOKEN IN RESPONSE - This is the fix!
+      token,
       user: {
         _id: user._id,
         name: user.name,
@@ -375,21 +372,32 @@ export const forgotPassword = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_RESET_SECRET, {
       expiresIn: "1h",
     });
-    
-    // ⭐ Use production URL for reset
-    const resetUrl = process.env.NODE_ENV === "production"
-      ? `${process.env.FRONTEND_URL}/reset-password?token=${token}`
-      : `http://localhost:5173/reset-password?token=${token}`;
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Password Reset Request",
-      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password.</p>`,
-    });
+    const resetUrl =
+      process.env.NODE_ENV === "production"
+        ? `${process.env.FRONTEND_URL}/reset-password?token=${token}`
+        : `http://localhost:5173/reset-password?token=${token}`;
+
+    const emailBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Reset Request</h2>
+        <p>You requested a password reset. Click the button below to reset your password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" 
+             style="background: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
+            Reset Password
+          </a>
+        </div>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      </div>
+    `;
+
+    await sendEmail(user.email, "Password Reset Request", emailBody);
 
     res.status(200).json({ message: "Password reset email sent" });
   } catch (err) {
+    console.error("Forgot password error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
@@ -481,52 +489,36 @@ export const adminAddAlumni = async (req, res) => {
       isAdmin: false,
     });
 
-    // ⭐ Use production URL for login
-    const loginUrl = process.env.NODE_ENV === "production"
-      ? `${process.env.FRONTEND_URL}/login`
-      : "http://localhost:5173/login";
+    const loginUrl =
+      process.env.NODE_ENV === "production"
+        ? `${process.env.FRONTEND_URL}/login`
+        : "http://localhost:5173/login";
 
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: alumni.email,
-        subject: "Welcome to CollegeConnect Alumni Network",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #10B981;">Welcome to CollegeConnect Alumni Network! 🎓</h2>
-            <p>Hi ${name},</p>
-            <p>Your alumni account has been created by the admin team.</p>
-            
-            <div style="background: #EEF2FF; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0;"><strong>Login Credentials:</strong></p>
-              <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 5px 0;"><strong>Temporary Password:</strong> ${tempPassword}</p>
-            </div>
-            
-            <div style="background: #FEF3C7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0;"><strong>⚠️ Important:</strong></p>
-              <ul style="margin: 5px 0;">
-                <li>Please change your password after first login</li>
-                <li>Update your profile with personal email</li>
-                <li>Complete your profile information</li>
-              </ul>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${loginUrl}" 
-                 style="background: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
-                Login Now
-              </a>
-            </div>
-            
-            <p>Welcome to the community!</p>
-            <p style="color: #6B7280;">- CollegeConnect Team</p>
-          </div>
-        `,
-      });
-    } catch (emailErr) {
-      console.error("Email send error:", emailErr);
-    }
+    const emailBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #10B981;">Welcome to CollegeConnect Alumni Network! 🎓</h2>
+        <p>Hi ${name},</p>
+        <p>Your alumni account has been created by the admin team.</p>
+        
+        <div style="background: #EEF2FF; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Login Credentials:</strong></p>
+          <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
+          <p style="margin: 5px 0;"><strong>Temporary Password:</strong> ${tempPassword}</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${loginUrl}" 
+             style="background: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
+            Login Now
+          </a>
+        </div>
+        
+        <p>Welcome to the community!</p>
+        <p style="color: #6B7280;">- CollegeConnect Team</p>
+      </div>
+    `;
+
+    await sendEmail(alumni.email, "Welcome to CollegeConnect Alumni Network", emailBody);
 
     res.status(201).json({
       success: true,
@@ -549,3 +541,6 @@ export const adminAddAlumni = async (req, res) => {
     });
   }
 };
+
+// ⭐ Export sendEmail for use in other controllers
+export { sendEmail };
