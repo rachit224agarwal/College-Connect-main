@@ -177,6 +177,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       setCurrentUser(res.data.user);
+
+      try {
+        const fullProfile = await getProfile();
+        console.log("Full profile fetched after login :", fullProfile);
+      } catch (error) {
+        console.error("Profile fetch failed:", error);
+        
+      }
       toast.success("Logged in successfully!");
     } catch (err: any) {
       const errorData = err.response?.data;
