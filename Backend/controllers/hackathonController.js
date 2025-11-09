@@ -81,9 +81,11 @@ export const createHackathon = async (req, res) => {
       tags,
       requirements,
     } = req.body;
+    
     if (!title || !description || !startDate || !endDate || !location) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+    
     let imageUrl = "";
     if (req.file) {
       try {
@@ -96,6 +98,7 @@ export const createHackathon = async (req, res) => {
         console.error("Image upload error:", uploadError);
       }
     }
+    
     const hackathon = await Hackathon.create({
       title,
       description,
@@ -116,6 +119,7 @@ export const createHackathon = async (req, res) => {
       requirements,
       createdBy: req.user._id,
     });
+    
     res.status(201).json({
       success: true,
       message: "Hackathon created successfully",
@@ -131,10 +135,59 @@ export const createHackathon = async (req, res) => {
   }
 };
 
+// ⭐ FIXED: Update Hackathon - Handle Empty Arrays
 export const updateHackathon = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = { ...req.body };
+
+    // ⭐ FIX 1: Clean up registeredUsers array
+    if (updates.registeredUsers) {
+      // If it's a string (from form data), parse it
+      if (typeof updates.registeredUsers === "string") {
+        try {
+          updates.registeredUsers = JSON.parse(updates.registeredUsers);
+        } catch (e) {
+          // If parsing fails, treat as empty array
+          updates.registeredUsers = [];
+        }
+      }
+
+      // Filter out empty strings and invalid IDs
+      if (Array.isArray(updates.registeredUsers)) {
+        updates.registeredUsers = updates.registeredUsers.filter(
+          (id) => id && typeof id === "string" && id.trim() !== "" && id !== "null" && id !== "undefined"
+        );
+      }
+
+      // If array is empty after filtering, don't update this field
+      if (updates.registeredUsers.length === 0) {
+        delete updates.registeredUsers;
+      }
+    }
+
+    // ⭐ FIX 2: Clean up teams array (if exists)
+    if (updates.teams) {
+      if (typeof updates.teams === "string") {
+        try {
+          updates.teams = JSON.parse(updates.teams);
+        } catch (e) {
+          updates.teams = [];
+        }
+      }
+
+      if (Array.isArray(updates.teams)) {
+        updates.teams = updates.teams.filter(
+          (id) => id && typeof id === "string" && id.trim() !== "" && id !== "null" && id !== "undefined"
+        );
+      }
+
+      if (updates.teams.length === 0) {
+        delete updates.teams;
+      }
+    }
+
+    // Handle file upload
     if (req.file) {
       try {
         const uploadedImage = await cloudinary.uploader.upload(req.file.path, {
@@ -146,9 +199,24 @@ export const updateHackathon = async (req, res) => {
         console.error("Image upload error:", uploadError);
       }
     }
+
+    // Handle tags
     if (updates.tags && typeof updates.tags === "string") {
-      updates.tags = updates.tags.split(",");
+      updates.tags = updates.tags.split(",").map(tag => tag.trim()).filter(tag => tag);
     }
+
+    // Handle date fields
+    if (updates.startDate) {
+      updates.startDate = new Date(updates.startDate);
+    }
+    if (updates.endDate) {
+      updates.endDate = new Date(updates.endDate);
+    }
+    if (updates.registrationDeadline) {
+      updates.registrationDeadline = new Date(updates.registrationDeadline);
+    }
+
+    console.log("📝 Updating hackathon with:", updates);
 
     const hackathon = await Hackathon.findByIdAndUpdate(id, updates, {
       new: true,
@@ -245,7 +313,6 @@ export const unregisterFromHackathon = async (req, res) => {
     if (!hackathon) {
       return res.status(404).json({ error: "Hackathon not found" });
     }
-
 
     hackathon.registeredUsers = hackathon.registeredUsers.filter(
       (user) => user.toString() !== userId.toString()
