@@ -55,36 +55,68 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) {
-      getProfile();
-      return;
-    }
-    setForm({
-      name: currentUser.name || "",
-      bio: currentUser.bio || "",
-      location: currentUser.location || "",
-      skills: Array.isArray(currentUser.skills)
-        ? currentUser.skills
-        : currentUser.skills
-        ? [currentUser.skills]
-        : [],
-      avatarFile: null,
-      avatar: currentUser.avatar || "",
-      resumeFile: null,
-      resumeUrl: currentUser.resumeUrl || "",
-      yearOfAdmission: currentUser.admissionYear?.toString() || "",
-      yearOfGraduation: currentUser.graduationYear?.toString() || "",
-      course: currentUser.course || "",
-      branch: currentUser.branch || "",
-      college: currentUser.college || "",
-      website: currentUser.website || "",
-      linkedin: currentUser.linkedin || "",
-      github: currentUser.github || "",
-      activities: Array.isArray(currentUser.activities)
-        ? currentUser.activities
-        : [],
-    });
-  }, [currentUser?._id]);
+    const loadProfile = async () => {
+      // Agar currentUser nahi hai to fetch karo
+      if (!currentUser) {
+        const profile = await getProfile();
+
+        // Agar profile mil gaya, to form populate karo
+        if (profile) {
+          setForm({
+            name: profile.name || "",
+            bio: profile.bio || "",
+            location: profile.location || "",
+            skills: Array.isArray(profile.skills) ? profile.skills : [],
+            avatarFile: null,
+            avatar: profile.avatar || "",
+            resumeFile: null,
+            resumeUrl: profile.resumeUrl || "",
+            yearOfAdmission: profile.admissionYear?.toString() || "",
+            yearOfGraduation: profile.graduationYear?.toString() || "",
+            course: profile.course || "",
+            branch: profile.branch || "",
+            college: profile.college || "",
+            website: profile.website || "",
+            linkedin: profile.linkedin || "",
+            github: profile.github || "",
+            activities: Array.isArray(profile.activities)
+              ? profile.activities
+              : [],
+          });
+        }
+        return;
+      }
+
+      // Agar currentUser already hai to directly form populate karo
+      setForm({
+        name: currentUser.name || "",
+        bio: currentUser.bio || "",
+        location: currentUser.location || "",
+        skills: Array.isArray(currentUser.skills)
+          ? currentUser.skills
+          : currentUser.skills
+          ? [currentUser.skills]
+          : [],
+        avatarFile: null,
+        avatar: currentUser.avatar || "",
+        resumeFile: null,
+        resumeUrl: currentUser.resumeUrl || "",
+        yearOfAdmission: currentUser.admissionYear?.toString() || "",
+        yearOfGraduation: currentUser.graduationYear?.toString() || "",
+        course: currentUser.course || "",
+        branch: currentUser.branch || "",
+        college: currentUser.college || "",
+        website: currentUser.website || "",
+        linkedin: currentUser.linkedin || "",
+        github: currentUser.github || "",
+        activities: Array.isArray(currentUser.activities)
+          ? currentUser.activities
+          : [],
+      });
+    };
+
+    loadProfile();
+  }, [currentUser]); 
 
   const handleSubmit = async () => {
     setLoading(true);
