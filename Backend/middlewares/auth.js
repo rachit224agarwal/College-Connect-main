@@ -1,12 +1,20 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 
 dotenv.config();
 export const authMiddleware = async (req, res, next) => {
   try {
-    // Read token from HttpOnly cookie
-    const token = req.cookies?.token;
+    // ⭐ COOKIE AUR AUTHORIZATION HEADER DONO CHECK KARO
+    let token = req.cookies?.token;
+
+    // If no cookie, check Authorization header
+    if (!token && req.headers.authorization) {
+      if (req.headers.authorization.startsWith("Bearer ")) {
+        token = req.headers.authorization.split(" ")[1];
+      }
+    }
+
     if (!token) {
       return res.status(401).json({ error: "No token provided." });
     }
@@ -65,7 +73,9 @@ export const authorize = (...allowedRoles) => {
       if (!allowedRoles.includes(req.user.role)) {
         return res.status(403).json({
           success: false,
-          error: `Access denied. Only ${allowedRoles.join(", ")} can access this resource.`,
+          error: `Access denied. Only ${allowedRoles.join(
+            ", "
+          )} can access this resource.`,
           userRole: req.user.role,
         });
       }
@@ -112,8 +122,15 @@ export const verifiedOnly = (req, res, next) => {
 
 export const protect = async (req, res, next) => {
   try {
-    // Get token from cookies
-    const token = req.cookies.token;
+    // ⭐ COOKIE AUR AUTHORIZATION HEADER DONO CHECK KARO
+    let token = req.cookies?.token;
+    
+    // If no cookie, check Authorization header
+    if (!token && req.headers.authorization) {
+      if (req.headers.authorization.startsWith("Bearer ")) {
+        token = req.headers.authorization.split(" ")[1];
+      }
+    }
 
     if (!token) {
       return res.status(401).json({
@@ -153,7 +170,7 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    // ✅ Auto-update role if needed (on every request)
+    // ✅ Auto-update role if needed
     const roleUpdate = await user.updateRoleIfNeeded();
     if (roleUpdate && roleUpdate.updated) {
       console.log(
